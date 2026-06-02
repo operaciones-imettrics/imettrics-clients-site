@@ -1,4 +1,4 @@
-name: Deploy to Firebase Hosting (Production)
+name: Deploy to Firebase Hosting and Cloud Run (Production)
 
 on:
   push:
@@ -11,13 +11,41 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install dependencies
+      
+      - name: Install dependencies (Frontend)
         run: npm ci
+        
       - name: Build frontend
         run: npm run build
+        
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
+        
       - name: Deploy to Firebase Hosting (PROD)
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-        run: firebase deploy --only hosting --project imettrics-clients-portal --non-interactive
+        run: firebase deploy --only hosting,firestore,storage --project imettrics-clients-portal --non-interactive
+
+      # GCP Cloud Run Backend Deployment
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY_PROD }}'
+
+      - name: Configure Docker
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev
+
+      - name: Build and Push Docker image
+        run: |
+          cd backend
+          docker build -t us-central1-docker.pkg.dev/imettrics-clients-portal/cloud-run-images/imettrics-backend:latest .
+          docker push us-central1-docker.pkg.dev/imettrics-clients-portal/cloud-run-images/imettrics-backend:latest
+
+      - name: Deploy to Cloud Run (PROD)
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: imettrics-backend
+          image: us-central1-docker.pkg.dev/imettrics-clients-portal/cloud-run-images/imettrics-backend:latest
+          region: us-central1
+          env_vars: |
+            NODE_ENV=production
