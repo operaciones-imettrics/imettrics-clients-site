@@ -1,0 +1,370 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #F8FAFC;
+  --max-width-editor: 860px;
+}
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  background-color: #F8FAFC;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+/* Print Styles */
+@media print {
+  @page {
+    margin: 2cm;
+    size: auto;
+  }
+
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+    font-size: 10.5pt; /* Smaller base font for more density */
+  }
+
+  .no-print, 
+  button, 
+  [contenteditable="false"] button,
+  .no-print * {
+    display: none !important;
+  }
+
+  .flex.h-screen {
+    height: auto !important;
+    display: block !important;
+    overflow: visible !important;
+  }
+
+  main, 
+  .tiptap-editor-container, 
+  .prose, 
+  .tiptap {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  /* Reset layout for print */
+  .tiptap-editor-container {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    max-width: none !important;
+  }
+
+  /* Typography Scaling - More Compact */
+  h1, .tiptap h1, h1 * { 
+    font-size: 1.6rem !important; 
+    margin-top: 0.75rem !important;
+    margin-bottom: 0.4rem !important;
+    line-height: 1.1 !important;
+    color: black !important;
+  }
+  h2, .tiptap h2, h2 * { 
+    font-size: 1.3rem !important; 
+    margin-top: 0.6rem !important;
+    margin-bottom: 0.3rem !important;
+    line-height: 1.1 !important;
+    color: black !important;
+  }
+  h3, .tiptap h3 { 
+    font-size: 1.1rem !important; 
+    margin-top: 0.5rem !important;
+    margin-bottom: 0.25rem !important;
+  }
+  h4, .tiptap h4 {
+    font-size: 1rem !important;
+    margin-top: 0.4rem !important;
+    margin-bottom: 0.2rem !important;
+  }
+  
+  p, .tiptap p {
+    margin-top: 0.25rem !important;
+    margin-bottom: 0.25rem !important;
+    line-height: 1.3 !important;
+  }
+
+  /* Compact Blocks */
+  .callout {
+    padding: 0.5rem 0.75rem !important;
+    margin: 0.5rem 0 !important;
+    gap: 0.5rem !important;
+  }
+
+  .parameter-table {
+    margin: 0.5rem 0 !important;
+  }
+  .parameter-table th, .parameter-table td {
+    padding: 0.4rem 0.6rem !important;
+  }
+
+  .tiptap pre {
+    padding: 0.75rem !important;
+    margin: 0.5rem 0 !important;
+    font-size: 8.5pt !important;
+  }
+
+  /* Fix Image positioning in print */
+  figure, .resizable-image-node {
+    margin: 0.75rem 0 !important;
+    display: block !important;
+    page-break-inside: avoid;
+  }
+
+  .tiptap details {
+    margin: 0.5rem 0 !important;
+    padding: 0 !important;
+  }
+
+  .tiptap .collapsible-content {
+    padding: 0.5rem 1rem !important;
+  }
+
+  /* Ensure background colors print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+.bn-editor {
+  padding-inline: 0px !important;
+}
+
+.bn-container {
+  background-color: white;
+}
+
+/* Custom Block Styles */
+.parameter-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.875rem;
+}
+
+.parameter-table th {
+  background-color: #334155;
+  color: white;
+  text-align: left;
+  padding: 0.75rem;
+  font-weight: 600;
+}
+
+.parameter-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.parameter-table tr:nth-child(even) {
+  background-color: #F8FAFC;
+}
+
+.callout {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+}
+
+.callout-info { background-color: #E0F2FE; }
+.callout-warning { background-color: #FFEDD5; }
+.callout-success { background-color: #DCFCE7; }
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.status-badge-new { background-color: #DCFCE7; color: #166534; }
+.status-badge-paused { background-color: #FFEDD5; color: #9A3412; }
+.status-badge-active { background-color: #E0F2FE; color: #075985; }
+
+/* Tiptap Heading Styles */
+.prose h1, .tiptap h1,
+.prose h2, .tiptap h2,
+.prose h3, .tiptap h3,
+.prose h4, .tiptap h4 {
+  color: #0f172a; /* Same deep slate for all levels */
+  font-weight: 800;
+  margin-bottom: 0.75rem;
+}
+
+.prose h1, .tiptap h1 { font-size: 2.25rem; margin-top: 2rem; }
+.prose h2, .tiptap h2 { font-size: 1.875rem; margin-top: 1.75rem; }
+.prose h3, .tiptap h3 { font-size: 1.5rem; margin-top: 1.5rem; font-weight: 700; }
+.prose h4, .tiptap h4 { font-size: 1.25rem; margin-top: 1.25rem; font-weight: 700; }
+
+
+.tiptap pre {
+  background: #f1f5f9;
+  color: #334155;
+  padding: 1.25rem;
+  border-radius: 0.75rem;
+  margin: 1.5rem 0;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  border: 1px solid #e2e8f0;
+  position: relative;
+}
+
+.tiptap pre::before {
+  content: 'JavaScript';
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #94a3b8;
+  background: #e2e8f0;
+  border-bottom-left-radius: 0.5rem;
+  border-top-right-radius: 0.75rem;
+}
+
+.tiptap pre code {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  color: inherit;
+  font-size: 0.9rem;
+}
+
+/* Syntax Highlighting Tokens */
+.hljs-comment,
+.hljs-quote {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-addition {
+  color: #0369a1;
+  font-weight: 600;
+}
+
+.hljs-number,
+.hljs-string,
+.hljs-meta,
+.hljs-literal,
+.hljs-regexp,
+.hljs-important,
+.hljs-symbol {
+  color: #059669;
+}
+
+.hljs-title,
+.hljs-section,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class {
+  color: #7c3aed;
+}
+
+.hljs-attribute,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-class_title,
+.hljs-type {
+  color: #ea580c;
+}
+
+.tiptap code {
+  background: #f1f5f9;
+  color: #e11d48;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+  font-size: 0.9em;
+}
+
+/* Collapsible Section Styles */
+.tiptap details {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 0.25rem;
+  margin: 1.5rem 0;
+  background: #f8fafc;
+  transition: all 0.2s ease;
+  overflow: visible;
+}
+
+.tiptap details[open] {
+  background: white;
+  box-shadow: 0 4px 12px -2px rgb(0 0 0 / 0.05);
+  border-color: #cbd5e1;
+}
+
+.tiptap summary {
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: #1e293b;
+  cursor: pointer;
+  padding: 0.75rem;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  outline: none;
+  user-select: none;
+  border-radius: 0.5rem;
+}
+
+.tiptap summary:hover {
+  background: #f1f5f9;
+}
+
+.tiptap summary::before {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 18 6-6-6-6'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tiptap details[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.tiptap details:not([open]) .collapsible-content {
+  display: none;
+}
+
+.tiptap .collapsible-wrapper.is-closed .collapsible-content {
+  display: none !important;
+}
+
+.tiptap .collapsible-wrapper.is-closed details {
+  max-height: 52px;
+  background: #f8fafc;
+}
+
+.tiptap .collapsible-content {
+  padding: 0.5rem 1rem 1rem 2.5rem;
+  border-top: 1px solid #f1f5f9;
+  margin-top: 0.25rem;
+  min-height: 1.5rem;
+}
+
+
+
+
+

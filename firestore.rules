@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Reglas para iMettrics Admin
+    match /{document=**} {
+      allow read, write: if request.auth != null && request.auth.token.role == 'admin';
+    }
+
+    // 2. Reglas para el Cliente (Viewer) interactuando con su propio Workspace
+    match /clients/{clientId} {
+      // El cliente puede leer su información de branding/workspace
+      allow read: if request.auth != null && (request.auth.token.clientId == clientId || request.auth.token.role == 'admin');
+      
+      // El cliente puede leer las guias que le pertenecen
+      match /guides/{guideId} {
+        allow read: if request.auth != null && (request.auth.token.clientId == clientId || request.auth.token.role == 'admin');
+      }
+
+      // El cliente puede leer las carpetas de su workspace
+      match /folders/{folderId} {
+        allow read: if request.auth != null && (request.auth.token.clientId == clientId || request.auth.token.role == 'admin');
+      }
+    }
+  }
+}

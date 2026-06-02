@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "dev": "imettrics-clients-portal-dev",
+    "prod": "imettrics-clients-portal"
+  }
+}
