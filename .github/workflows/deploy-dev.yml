@@ -49,5 +49,9 @@ jobs:
           service: imettrics-backend
           image: us-central1-docker.pkg.dev/imettrics-clients-portal-dev/cloud-run-images/imettrics-backend:latest
           region: us-central1
+          flags: '--allow-unauthenticated'
           env_vars: |
             NODE_ENV=development
+
+      - name: Make Cloud Run service public natively (DEV)
+        run: gcloud run services add-iam-policy-binding imettrics-backend --region us-central1 --member="allUsers" --role="roles/run.invoker"
