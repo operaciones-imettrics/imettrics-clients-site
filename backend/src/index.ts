@@ -1,16 +1,13 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import * as admin from 'firebase-admin';
+import './firebase';
 import { authMiddleware } from './middleware/auth';
 import guidesRouter from './routes/guides';
 import clientsRouter from './routes/clients';
 import storageRouter from './routes/storage';
 
 dotenv.config();
-
-// Initialize Firebase Admin
-admin.initializeApp();
 
 const app = express();
 app.use(cors());
@@ -26,7 +23,7 @@ app.use('/api/clients', authMiddleware, clientsRouter);
 app.use('/api/guides', authMiddleware, guidesRouter);
 app.use('/api/storage', authMiddleware, storageRouter);
 
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
+const PORT = parseInt(process.env.PORT as string) || 8080;
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`Backend Server running on port ${PORT}`);
 });

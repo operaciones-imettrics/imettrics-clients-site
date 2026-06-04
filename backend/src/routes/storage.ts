@@ -1,9 +1,8 @@
 import { Router, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
-import * as admin from 'firebase-admin';
+import { storage } from '../firebase';
 
 const router = Router();
-const storage = admin.storage();
 
 // Generate v4 read/write signed URL
 router.post('/signed-url', async (req: AuthenticatedRequest, res: Response) => {

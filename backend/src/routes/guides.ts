@@ -1,9 +1,8 @@
 import { Router } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
-import * as admin from 'firebase-admin';
+import { db } from '../firebase';
 
 const router = Router();
-const db = admin.firestore();
 
 // Example Route: Get Guides
 router.get('/', async (req: AuthenticatedRequest, res) => {

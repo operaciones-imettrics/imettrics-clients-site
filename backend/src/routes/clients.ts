@@ -1,9 +1,9 @@
 import { Router, Response } from 'express';
 import { AuthenticatedRequest, requireAdmin } from '../middleware/auth';
 import * as admin from 'firebase-admin';
+import { db } from '../firebase';
 
 const router = Router();
-const db = admin.firestore();
 
 // Admin Only Route: Get All Clients Workspaces
 router.get('/', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
