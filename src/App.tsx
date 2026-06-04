@@ -7,11 +7,15 @@ import { storage } from "./services/storage";
 import { MantineProvider, createTheme } from '@mantine/core';
 import '@mantine/core/styles.css';
 
+import { AuthProvider, useAuth } from './components/AuthProvider';
+import { Login } from './pages/Login';
+
 const theme = createTheme({
   primaryColor: 'blue',
 });
 
-function App() {
+function AppContent() {
+  const { user } = useAuth();
   const [currentView, setCurrentView] = useState<"list" | "editor">(
     () => (localStorage.getItem("current_view") as "list" | "editor") || "list"
   );
@@ -58,7 +62,6 @@ function App() {
     };
   }, []);
 
-
   const handleNewGuide = (folderId: string | null = null) => {
     const newId = uuidv4();
     const newGuide = {
@@ -75,39 +78,50 @@ function App() {
     setCurrentView("editor");
   };
 
+  if (!user) {
+    return <Login />;
+  }
+
+  return (
+    <div className="flex h-screen overflow-hidden bg-slate-50">
+      <Sidebar 
+        activeGuideId={activeGuideId} 
+        onSelectGuide={handleSelectGuide} 
+        onNewGuide={(fid) => handleNewGuide(fid || null)} 
+        onGoHome={() => {
+          setCurrentView("list");
+          setActiveGuideId(null);
+          localStorage.removeItem("current_folder_id");
+          window.dispatchEvent(new Event("current_folder_changed"));
+        }}
+      />
+      
+      <div className="flex-grow overflow-auto relative">
+        {currentView === "list" ? (
+          <GuideList
+            onSelectGuide={handleSelectGuide}
+            onNewGuide={(fid) => handleNewGuide(fid)}
+          />
+        ) : (
+          activeGuideId && (
+            <EditorPage
+              guideId={activeGuideId}
+              initialMarkdown={markdownToImport}
+              onBack={() => setCurrentView("list")}
+            />
+          )
+        )}
+      </div>
+    </div>
+  );
+}
+
+function App() {
   return (
     <MantineProvider theme={theme}>
-      <div className="flex h-screen overflow-hidden bg-slate-50">
-        <Sidebar 
-          activeGuideId={activeGuideId} 
-          onSelectGuide={handleSelectGuide} 
-          onNewGuide={(fid) => handleNewGuide(fid || null)} 
-          onGoHome={() => {
-            setCurrentView("list");
-            setActiveGuideId(null);
-            localStorage.removeItem("current_folder_id");
-            // Dispatch storage event or local event so GuideList updates if it is open
-            window.dispatchEvent(new Event("current_folder_changed"));
-          }}
-        />
-        
-        <div className="flex-grow overflow-auto relative">
-          {currentView === "list" ? (
-            <GuideList
-              onSelectGuide={handleSelectGuide}
-              onNewGuide={(fid) => handleNewGuide(fid)}
-            />
-          ) : (
-            activeGuideId && (
-              <EditorPage
-                guideId={activeGuideId}
-                initialMarkdown={markdownToImport}
-                onBack={() => setCurrentView("list")}
-              />
-            )
-          )}
-        </div>
-      </div>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </MantineProvider>
   );
 }
