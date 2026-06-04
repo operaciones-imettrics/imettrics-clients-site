@@ -17,6 +17,7 @@ jobs:
       - name: Build frontend
         run: |
           cp .env.development .env
+          rm -f .env.production
           npm run build
         
       - name: Install Firebase CLI
