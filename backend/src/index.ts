@@ -6,6 +6,7 @@ import { authMiddleware } from './middleware/auth';
 import guidesRouter from './routes/guides';
 import clientsRouter from './routes/clients';
 import storageRouter from './routes/storage';
+import foldersRouter from './routes/folders';
 
 dotenv.config();
 
@@ -21,6 +22,7 @@ app.get('/api/health', (req, res) => {
 // App Routes
 app.use('/api/clients', authMiddleware, clientsRouter);
 app.use('/api/guides', authMiddleware, guidesRouter);
+app.use('/api/folders', authMiddleware, foldersRouter);
 app.use('/api/storage', authMiddleware, storageRouter);
 
 const PORT = parseInt(process.env.PORT as string) || 8080;

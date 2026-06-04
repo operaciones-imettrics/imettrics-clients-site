@@ -16,6 +16,13 @@ const theme = createTheme({
 
 function AppContent() {
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      storage.syncFromRemote();
+    }
+  }, [user]);
+
   const [currentView, setCurrentView] = useState<"list" | "editor">(
     () => (localStorage.getItem("current_view") as "list" | "editor") || "list"
   );

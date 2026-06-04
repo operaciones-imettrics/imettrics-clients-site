@@ -4,13 +4,12 @@ import { db } from '../firebase';
 
 const router = Router();
 
-// Get Guides
+// Get Folders
 router.get('/', async (req: AuthenticatedRequest, res) => {
     try {
         const { clientId, role } = req.user!;
         let targetClientId = req.query.clientId as string;
         
-        // RBAC enforcement
         if (role !== 'admin') {
             targetClientId = clientId;
         } else if (!targetClientId) {
@@ -22,15 +21,15 @@ router.get('/', async (req: AuthenticatedRequest, res) => {
              return;
         }
 
-        const snapshot = await db.collection(`clients/${targetClientId}/guides`).get();
-        const guides = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        res.json(guides);
+        const snapshot = await db.collection(`clients/${targetClientId}/folders`).get();
+        const folders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        res.json(folders);
     } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch guides' });
+        res.status(500).json({ error: 'Failed to fetch folders' });
     }
 });
 
-// Create Guide
+// Create Folder
 router.post('/', async (req: AuthenticatedRequest, res) => {
     try {
         const { clientId, role } = req.user!;
@@ -38,8 +37,6 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
         
         if (role !== 'admin') {
             targetClientId = clientId;
-        } else if (!targetClientId) {
-            targetClientId = clientId;
         }
 
         if (!targetClientId) {
@@ -47,23 +44,17 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
              return;
         }
 
-        const newGuide = {
-            ...req.body.guide,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
+        const newFolder = { ...req.body.folder };
+        const docRef = db.collection(`clients/${targetClientId}/folders`).doc(newFolder.id || undefined);
+        await docRef.set(newFolder, { merge: true });
 
-        const docRef = db.collection(`clients/${targetClientId}/guides`).doc(newGuide.id || undefined);
-        await docRef.set(newGuide, { merge: true });
-
-        res.json({ id: docRef.id, ...newGuide });
+        res.json({ id: docRef.id, ...newFolder });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Failed to create guide' });
+        res.status(500).json({ error: 'Failed to create folder' });
     }
 });
 
-// Update Guide
+// Update Folder
 router.put('/:id', async (req: AuthenticatedRequest, res) => {
     try {
         const id = req.params.id as string;
@@ -72,8 +63,6 @@ router.put('/:id', async (req: AuthenticatedRequest, res) => {
         
         if (role !== 'admin') {
             targetClientId = clientId;
-        } else if (!targetClientId) {
-            targetClientId = clientId;
         }
 
         if (!targetClientId) {
@@ -81,20 +70,15 @@ router.put('/:id', async (req: AuthenticatedRequest, res) => {
              return;
         }
 
-        const updateData = {
-            ...req.body.guide,
-            updatedAt: new Date().toISOString()
-        };
-
-        await db.collection(`clients/${targetClientId}/guides`).doc(id).set(updateData, { merge: true });
+        const updateData = { ...req.body.folder };
+        await db.collection(`clients/${targetClientId}/folders`).doc(id).set(updateData, { merge: true });
         res.json({ id, ...updateData });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Failed to update guide' });
+        res.status(500).json({ error: 'Failed to update folder' });
     }
 });
 
-// Delete Guide
+// Delete Folder
 router.delete('/:id', async (req: AuthenticatedRequest, res) => {
     try {
         const id = req.params.id as string;
@@ -103,8 +87,6 @@ router.delete('/:id', async (req: AuthenticatedRequest, res) => {
         
         if (role !== 'admin') {
             targetClientId = clientId;
-        } else if (!targetClientId) {
-            targetClientId = clientId;
         }
 
         if (!targetClientId) {
@@ -112,10 +94,10 @@ router.delete('/:id', async (req: AuthenticatedRequest, res) => {
              return;
         }
 
-        await db.collection(`clients/${targetClientId}/guides`).doc(id).delete();
+        await db.collection(`clients/${targetClientId}/folders`).doc(id).delete();
         res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ error: 'Failed to delete guide' });
+        res.status(500).json({ error: 'Failed to delete folder' });
     }
 });
 

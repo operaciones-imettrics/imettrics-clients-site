@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import type { Folder, Guide, GuideStore } from "../types";
 import type { GuideBackup } from "./markdownExporter";
-
+import { api } from "../lib/api";
 
 const STORAGE_KEY = "ga4_measurement_guides";
 
@@ -17,7 +17,6 @@ export const storage = {
       };
     } catch (e) {
       console.error("Error parsing storage", e);
-      // If the stored data is corrupted, clear it to avoid app crash
       localStorage.removeItem(STORAGE_KEY);
       return { guides: [], folders: [] };
     }
@@ -27,6 +26,25 @@ export const storage = {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
   },
 
+  // ---- NEW: API Synchronization ----
+  async syncFromRemote() {
+    try {
+      const [remoteGuides, remoteFolders] = await Promise.all([
+        api.get<Guide[]>('/api/guides'),
+        api.get<Folder[]>('/api/folders')
+      ]);
+      const store = this.getStore();
+      // Optimistic overwrite strategy for MVP
+      store.guides = remoteGuides;
+      store.folders = remoteFolders;
+      this.saveStore(store);
+      window.dispatchEvent(new Event("storage_synced"));
+    } catch (e) {
+      console.error('Failed to sync from remote', e);
+    }
+  },
+
+  // ---- existing methods ----
   getGuides(): Guide[] {
     return this.getStore().guides;
   },
@@ -48,15 +66,18 @@ export const storage = {
       });
     }
     this.saveStore(store);
+    // Broadcast to backend
+    api.put(`/api/guides/${guide.id}`, { guide }).catch(console.error);
   },
 
   deleteGuide(id: string) {
     const store = this.getStore();
     store.guides = store.guides.filter((g) => g.id !== id);
     this.saveStore(store);
+    // Broadcast to backend
+    api.delete(`/api/guides/${id}`).catch(console.error);
   },
 
-  // Folder management
   getFolders(): Folder[] {
     return this.getStore().folders;
   },
@@ -70,6 +91,7 @@ export const storage = {
       store.folders.push(folder);
     }
     this.saveStore(store);
+    api.put(`/api/folders/${folder.id}`, { folder }).catch(console.error);
   },
 
   clearStore() {
@@ -80,11 +102,9 @@ export const storage = {
     }
   },
 
-  // Delete a folder and all its contents (nested folders and guides)
   deleteFolder(id: string) {
     const store = this.getStore();
 
-    // Helper to recursively collect all folder IDs to delete
     const collectFolderIds = (folderId: string): string[] => {
       const ids = [folderId];
       const children = store.folders.filter(f => f.parentId === folderId);
@@ -95,13 +115,16 @@ export const storage = {
     };
 
     const foldersToDelete = collectFolderIds(id);
+    const guidesToDelete = store.guides.filter(g => g.folderId && foldersToDelete.includes(g.folderId));
 
-    // Remove all collected folders
     store.folders = store.folders.filter(f => !foldersToDelete.includes(f.id));
-    // Remove all guides belonging to any of those folders
     store.guides = store.guides.filter(g => !g.folderId || !foldersToDelete.includes(g.folderId));
 
     this.saveStore(store);
+
+    // Sync deletions to remote
+    foldersToDelete.forEach(fid => api.delete(`/api/folders/${fid}`).catch(console.error));
+    guidesToDelete.forEach(g => api.delete(`/api/guides/${g.id}`).catch(console.error));
   },
 
   moveGuide(guideId: string, folderId: string | null) {
@@ -111,16 +134,18 @@ export const storage = {
       guide.folderId = folderId;
       guide.updatedAt = new Date().toISOString();
       this.saveStore(store);
+      api.put(`/api/guides/${guide.id}`, { guide }).catch(console.error);
     }
   },
 
   moveFolder(folderId: string, parentId: string | null) {
-    if (folderId === parentId) return; // Prevent self-nesting
+    if (folderId === parentId) return; 
     const store = this.getStore();
     const folder = store.folders.find(f => f.id === folderId);
     if (folder) {
       folder.parentId = parentId;
       this.saveStore(store);
+      api.put(`/api/folders/${folder.id}`, { folder }).catch(console.error);
     }
   },
 
@@ -138,6 +163,7 @@ export const storage = {
       };
       store.guides.push(newGuide);
       this.saveStore(store);
+      api.put(`/api/guides/${newGuide.id}`, { guide: newGuide }).catch(console.error);
       return newGuide;
     }
   },
@@ -154,16 +180,12 @@ export const storage = {
         parentId: targetParentId !== null ? targetParentId : folder.parentId,
       };
       store.folders.push(newFolder);
+      this.saveStore(store);
+      api.put(`/api/folders/${newFolder.id}`, { folder: newFolder }).catch(console.error);
       
-      // Copy child folders
       const childFolders = store.folders.filter(f => f.parentId === folderId);
-      // Wait, we need to avoid infinite loop or duplicate in store.
-      // We'll call saveStore at the end.
-      this.saveStore(store); // Save current so recursive calls can see it
-      
       childFolders.forEach(cf => this.copyFolder(cf.id, newFolderId));
       
-      // Copy child guides
       const childGuides = store.guides.filter(g => g.folderId === folderId);
       childGuides.forEach(cg => this.copyGuide(cg.id, newFolderId));
       
@@ -171,11 +193,6 @@ export const storage = {
     }
   },
 
-  /**
-   * Import a guide from a backup object.
-   * Always assigns a fresh ID to avoid collisions with existing guides.
-   * Returns the newly created guide.
-   */
   importGuideFromBackup(backup: GuideBackup, targetFolderId?: string | null): Guide {
     const store = this.getStore();
     const newGuide: Guide = {
@@ -188,6 +205,7 @@ export const storage = {
     };
     store.guides.push(newGuide);
     this.saveStore(store);
+    api.put(`/api/guides/${newGuide.id}`, { guide: newGuide }).catch(console.error);
     return newGuide;
   },
 };
