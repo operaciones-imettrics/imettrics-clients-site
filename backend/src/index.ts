@@ -10,9 +10,33 @@ import foldersRouter from './routes/folders';
 
 dotenv.config();
 
+const ALLOWED_ORIGINS = [
+    'http://localhost:5173',
+    'http://localhost:4173',
+    'https://imettrics-clients-portal-dev.web.app',
+    'https://imettrics-clients-portal-dev.firebaseapp.com',
+    'https://imettrics-clients-portal.web.app',
+    'https://imettrics-clients-portal.firebaseapp.com',
+    // Add your custom domain here when ready, e.g. 'https://portal.imettrics.com'
+];
+
 const app = express();
-app.use(cors());
-app.use(express.json());
+app.use(cors({
+    origin: (origin, callback) => {
+        // Allow requests with no origin (e.g. curl, mobile apps)
+        if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error(`CORS origin not allowed: ${origin}`));
+        }
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+}));
+app.options('*', cors()); // Pre-flight for all routes
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Main healthcheck
 app.get('/api/health', (req, res) => {
