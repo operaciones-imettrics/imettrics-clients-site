@@ -1,5 +1,12 @@
 import type { JSONContent } from "@tiptap/core";
 
+export interface Client {
+  id: string;
+  name: string;
+  logo_url?: string;
+  primary_color?: string;
+}
+
 export interface Folder {
   id: string;
   name: string;

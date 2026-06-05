@@ -52,6 +52,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSelectGuide, activeGuideId, 
   // Initial load
   useEffect(() => {
     refreshData();
+    window.addEventListener("storage_synced", refreshData);
+    return () => window.removeEventListener("storage_synced", refreshData);
   }, []);
 
   // Update on guide selection or changes

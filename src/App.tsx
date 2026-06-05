@@ -10,18 +10,23 @@ import '@mantine/core/styles.css';
 import { AuthProvider, useAuth } from './components/AuthProvider';
 import { Login } from './pages/Login';
 
+import { api } from "./lib/api";
+import { ClientProvider, useClientContext } from "./contexts/ClientContext";
+
 const theme = createTheme({
   primaryColor: 'blue',
 });
 
 function AppContent() {
   const { user } = useAuth();
+  const { selectedClientId } = useClientContext();
 
   useEffect(() => {
     if (user) {
+      api.setClientId(selectedClientId);
       storage.syncFromRemote();
     }
-  }, [user]);
+  }, [user, selectedClientId]);
 
   const [currentView, setCurrentView] = useState<"list" | "editor">(
     () => (localStorage.getItem("current_view") as "list" | "editor") || "list"
@@ -127,7 +132,9 @@ function App() {
   return (
     <MantineProvider theme={theme}>
       <AuthProvider>
-        <AppContent />
+        <ClientProvider>
+          <AppContent />
+        </ClientProvider>
       </AuthProvider>
     </MantineProvider>
   );

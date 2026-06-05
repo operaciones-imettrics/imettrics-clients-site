@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Modal, Button, Text, Group, Progress } from '@mantine/core';
 import { Plus, FileText, Trash2, Clock, Folder, ChevronRight, BookOpen, Upload, FolderOpen, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
-import type { Guide, Folder as FolderType } from "../types";
+import type { Guide, Folder as FolderType, Client } from "../types";
 import { storage } from "../services/storage";
 import { importGitBook } from "../services/gitbookImporter";
 import { parseGitbookMarkdown } from "../lib/gitbookParser";
 import { v4 as uuidv4 } from "uuid";
+import { api } from "../lib/api";
+import { useClientContext } from "../contexts/ClientContext";
+import { Select } from "@mantine/core";
 
 interface GuideListProps {
   onSelectGuide: (id: string) => void;
@@ -21,6 +24,16 @@ export const GuideList: React.FC<GuideListProps> = ({
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(
     () => localStorage.getItem("current_folder_id")
   );
+  
+  const { selectedClientId, setSelectedClientId } = useClientContext();
+  const [clients, setClients] = useState<Client[]>([]);
+
+  useEffect(() => {
+    // Attempt to fetch clients; if it fails (not admin), we just ignore it
+    api.get<Client[]>('/api/clients')
+      .then(setClients)
+      .catch(() => setClients([]));
+  }, []);
 
   // States for GitBook Import
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -44,6 +57,8 @@ export const GuideList: React.FC<GuideListProps> = ({
 
   useEffect(() => {
     refreshData();
+    window.addEventListener("storage_synced", refreshData);
+    return () => window.removeEventListener("storage_synced", refreshData);
   }, []);
 
   useEffect(() => {
@@ -417,9 +432,23 @@ export const GuideList: React.FC<GuideListProps> = ({
       <header className="mb-10">
         <div className="flex justify-between items-start mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">
-              {currentFolder ? currentFolder.name : "Mis Clientes"}
-            </h1>
+            {clients.length > 0 ? (
+              <Select
+                placeholder="Seleccionar Cliente"
+                data={[{ value: '', label: 'Ver todos (Mis Guías)' }, ...clients.map(c => ({ value: c.id, label: c.name }))]}
+                value={selectedClientId || ''}
+                onChange={(val) => {
+                  setSelectedClientId(val === '' ? null : val);
+                  setCurrentFolderId(null);
+                }}
+                className="mb-1"
+                styles={{ input: { fontWeight: 'bold', fontSize: '1.5rem', height: 'auto', padding: '0.25rem 0.5rem', border: 'transparent', backgroundColor: 'transparent' } }}
+              />
+            ) : (
+              <h1 className="text-3xl font-bold text-slate-900">
+                {currentFolder ? currentFolder.name : "Mis Clientes"}
+              </h1>
+            )}
             <p className="text-slate-500 mt-1">
               {currentFolder ? "Gestiona los proyectos y guías de este cliente" : "Explora tus clientes y proyectos de medición"}
             </p>
