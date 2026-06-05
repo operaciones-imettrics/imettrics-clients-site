@@ -1,73 +1,116 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { BookOpen, BarChart2, PieChart, Settings, Home } from 'lucide-react';
+import { BookOpen, BarChart2, PieChart, Settings, ChevronLeft, LogOut } from 'lucide-react';
 import { Tooltip } from '@mantine/core';
+import { signOut } from 'firebase/auth';
+import { auth } from '../lib/firebase';
+import { useClientContext } from '../contexts/ClientContext';
+
+const NAV_ITEMS = [
+  { to: 'guides', label: 'Guías de Medición', icon: BookOpen, active: true },
+  { to: null, label: 'Reportes', icon: BarChart2, active: false },
+  { to: null, label: 'Dashboards', icon: PieChart, active: false },
+];
 
 export const AppShell: React.FC = () => {
+  const { clients, selectedClientId } = useClientContext() as any;
+  const workspace = clients?.find((c: any) => c.id === selectedClientId);
+
+  const handleSignOut = () => signOut(auth);
+
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
-      {/* Primary Slim Navigation */}
-      <nav className="w-16 flex flex-col items-center py-4 bg-slate-900 border-r border-slate-800 shrink-0 z-50">
-        <div className="mb-6">
-          <Tooltip label="Volver a Admin Panel" position="right">
-            <NavLink to="/admin">
-              <img 
-                src="https://imettrics.com/wp-content/uploads/2023/12/Favicon.png" 
-                alt="iMettrics" 
-                className="h-8 w-8 object-contain hover:scale-105 transition-transform"
-              />
-            </NavLink>
-          </Tooltip>
-        </div>
+    <div className="flex h-screen overflow-hidden bg-slate-100">
+      {/* Sidebar */}
+      <nav className="w-60 shrink-0 flex flex-col bg-slate-950 border-r border-slate-800 z-50">
         
-        <div className="flex flex-col gap-3 flex-grow w-full px-2 mt-4">
-          <Tooltip label="Guías de Medición" position="right">
-            <NavLink 
-              to="guides" 
-              className={({isActive}) => `flex justify-center p-3 rounded-xl transition-colors ${isActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
-            >
-              <BookOpen size={20} />
-            </NavLink>
-          </Tooltip>
-          
-          <Tooltip label="Reportes (Próximamente)" position="right">
-            <button className="flex justify-center p-3 rounded-xl text-slate-600 cursor-not-allowed">
-              <BarChart2 size={20} />
-            </button>
-          </Tooltip>
-          
-          <Tooltip label="Dashboards (Próximamente)" position="right">
-            <button className="flex justify-center p-3 rounded-xl text-slate-600 cursor-not-allowed">
-              <PieChart size={20} />
-            </button>
-          </Tooltip>
+        {/* Logo & Workspace Name */}
+        <div className="px-4 pt-5 pb-4 border-b border-slate-800">
+          <div className="flex items-center gap-3 mb-4">
+            <img
+              src="https://imettrics.com/wp-content/uploads/2023/12/Favicon.png"
+              alt="iMettrics"
+              className="h-7 w-7 object-contain shrink-0"
+            />
+            <span className="text-slate-300 text-xs font-semibold uppercase tracking-widest">
+              iMettrics
+            </span>
+          </div>
+          {workspace && (
+            <div className="bg-slate-800/60 rounded-lg px-3 py-2">
+              <p className="text-slate-500 text-xs mb-0.5">Workspace</p>
+              <p className="text-white text-sm font-semibold truncate">{workspace.name}</p>
+            </div>
+          )}
         </div>
 
-        <div className="mt-auto px-2 w-full flex flex-col gap-3">
-          <Tooltip label="Admin Panel" position="right">
-            <NavLink 
-              to="/admin" 
-              className="flex justify-center p-3 rounded-xl transition-colors text-slate-400 hover:text-white hover:bg-slate-800"
-            >
-              <Home size={20} />
-            </NavLink>
-          </Tooltip>
-          
-          <Tooltip label="Configuración del Workspace" position="right">
-            <NavLink 
-              to="settings" 
-              className={({isActive}) => `flex justify-center p-3 rounded-xl transition-colors ${isActive ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
-            >
-              <Settings size={20} />
-            </NavLink>
-          </Tooltip>
+        {/* Main Navigation */}
+        <div className="flex-1 px-3 py-4 flex flex-col gap-1">
+          <p className="text-slate-600 text-xs font-semibold uppercase tracking-wider px-2 mb-2">Módulos</p>
+          {NAV_ITEMS.map(({ to, label, icon: Icon, active }) =>
+            active && to ? (
+              <NavLink
+                key={label}
+                to={to}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+                    isActive
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  }`
+                }
+              >
+                <Icon size={18} />
+                {label}
+              </NavLink>
+            ) : (
+              <Tooltip key={label} label="Próximamente" position="right" withArrow>
+                <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-700 cursor-not-allowed w-full text-left select-none">
+                  <Icon size={18} />
+                  {label}
+                  <span className="ml-auto text-[10px] bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded-full font-normal">pronto</span>
+                </button>
+              </Tooltip>
+            )
+          )}
+        </div>
+
+        {/* Bottom Actions */}
+        <div className="px-3 pb-4 flex flex-col gap-1 border-t border-slate-800 pt-3">
+          <NavLink
+            to="/admin"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-all duration-150"
+          >
+            <ChevronLeft size={18} />
+            Panel de Admin
+          </NavLink>
+          <NavLink
+            to="settings"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+                isActive
+                  ? 'bg-slate-700 text-white'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`
+            }
+          >
+            <Settings size={18} />
+            Configuración
+          </NavLink>
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-500/70 hover:text-red-400 hover:bg-red-950/40 transition-all duration-150 w-full text-left"
+          >
+            <LogOut size={18} />
+            Cerrar Sesión
+          </button>
         </div>
       </nav>
-      
-      {/* Workspace Module Content */}
-      <main className="flex-grow flex overflow-hidden relative isolate">
-         <Outlet />
+
+      {/* Main content */}
+      <main className="flex-grow flex overflow-hidden relative">
+        <Outlet />
       </main>
     </div>
   );
 };
+
