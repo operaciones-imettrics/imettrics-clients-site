@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
-import { MantineProvider, createTheme } from '@mantine/core';
+import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate } from "react-router-dom";
+import { MantineProvider, createTheme, Loader } from '@mantine/core';
 import '@mantine/core/styles.css';
 
 import { AuthProvider, useAuth } from './components/AuthProvider';
@@ -8,6 +8,7 @@ import { Login } from './pages/Login';
 import { api } from "./lib/api";
 import { ClientProvider, useClientContext } from "./contexts/ClientContext";
 import { storage } from "./services/storage";
+import type { Client } from "./types";
 
 // Pages & Layout
 import { AppShell } from "./components/AppShell";
@@ -43,27 +44,49 @@ function WorkspaceMiddleware() {
   return <AppShell />;
 }
 
-// Global Auth wrapper
-function AppContent() {
+// Global Router
+function AppRouter() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      api.get<Client[]>('/api/clients/my-workspaces')
+        .then(data => {
+            const currentPath = window.location.pathname;
+            // If they are on the root or login, auto redirect
+            if (currentPath === '/') {
+                if (data.length === 1 && user.customRole !== 'admin') {
+                    navigate(`/workspace/${data[0].id}`);
+                } else if (data.length > 0 || user.customRole === 'admin') {
+                    navigate('/admin');
+                }
+            }
+        })
+        .catch(console.error);
+    }
+  }, [user, navigate]);
 
   if (!user) {
-    return <Login />;
+    return (
+      <Routes>
+        <Route path="*" element={<Login />} />
+      </Routes>
+    );
   }
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Navigate to="/admin" replace />} />
-        <Route path="/admin" element={<AdminPortal />} />
-        <Route path="/workspace/:clientId" element={<WorkspaceMiddleware />}>
-           <Route index element={<Navigate to="guides" replace />} />
-           <Route path="guides" element={<GuidesModule />} />
-           {/* Future modules go here */}
-           <Route path="settings" element={<WorkspaceSettings />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <Routes>
+      <Route path="/" element={<div className="h-screen flex items-center justify-center"><Loader /></div>} />
+      <Route path="/admin" element={<AdminPortal />} />
+      <Route path="/workspace/:clientId" element={<WorkspaceMiddleware />}>
+         <Route index element={<Navigate to="guides" replace />} />
+         <Route path="guides" element={<GuidesModule />} />
+         {/* Future modules go here */}
+         <Route path="settings" element={<WorkspaceSettings />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
 
@@ -72,7 +95,9 @@ function App() {
     <MantineProvider theme={theme}>
       <AuthProvider>
         <ClientProvider>
-          <AppContent />
+          <BrowserRouter>
+            <AppRouter />
+          </BrowserRouter>
         </ClientProvider>
       </AuthProvider>
     </MantineProvider>
