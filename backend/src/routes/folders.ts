@@ -37,6 +37,8 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
         
         if (role !== 'admin') {
             targetClientId = clientId;
+        } else if (!targetClientId) {
+            targetClientId = clientId;
         }
 
         if (!targetClientId) {
@@ -63,6 +65,8 @@ router.put('/:id', async (req: AuthenticatedRequest, res) => {
         
         if (role !== 'admin') {
             targetClientId = clientId;
+        } else if (!targetClientId) {
+            targetClientId = clientId;
         }
 
         if (!targetClientId) {
@@ -86,6 +90,8 @@ router.delete('/:id', async (req: AuthenticatedRequest, res) => {
         let targetClientId = req.query.clientId as string;
         
         if (role !== 'admin') {
+            targetClientId = clientId;
+        } else if (!targetClientId) {
             targetClientId = clientId;
         }
 
