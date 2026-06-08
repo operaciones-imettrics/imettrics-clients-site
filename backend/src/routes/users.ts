@@ -55,12 +55,12 @@ router.post('/', requireAdmin, async (req: AuthenticatedRequest, res: Response) 
 // Admin Only Route: Remove a user from a clientId whitelist
 router.delete('/:email', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const clientId = req.params.clientId;
-        const email = req.params.email;
+        const clientId = req.params.clientId as string;
+        const email = req.params.email as string;
 
         const snapshot = await db.collection('user_access')
             .where('clientId', '==', clientId)
-            .where('email', '==', email.toLowerCase())
+            .where('email', '==', String(email).toLowerCase())
             .get();
 
         if (snapshot.empty) {
