@@ -4,6 +4,7 @@ import { storage } from "../services/storage";
 import type { Guide, Folder as FolderType } from "../types";
 import { v4 as uuidv4 } from "uuid";
 import { ScrollArea, TextInput, ActionIcon, Menu, Button, Tooltip, Modal } from "@mantine/core";
+import { useAuth } from "./AuthProvider";
 
 interface SidebarProps {
   onSelectGuide: (id: string) => void;
@@ -22,6 +23,8 @@ interface DialogState {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ onSelectGuide, activeGuideId, onNewGuide, onGoHome }) => {
+  const { user } = useAuth();
+  const isAdmin = user?.customRole === 'admin';
   const [folders, setFolders] = useState<FolderType[]>([]);
   const [dialog, setDialog] = useState<DialogState | null>(null);
   const [guides, setGuides] = useState<Guide[]>([]);
@@ -155,6 +158,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSelectGuide, activeGuideId, 
 
   // Drag and Drop Handlers
   const onDragStart = (e: React.DragEvent, id: string, type: 'guide' | 'folder') => {
+    if (!isAdmin) return;
     setDraggedItem({ id, type });
     e.dataTransfer.setData("id", id);
     e.dataTransfer.setData("type", type);
@@ -215,7 +219,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSelectGuide, activeGuideId, 
         onDrop={(e) => onDrop(e, folder.id)}
       >
         <div 
-          draggable
+          draggable={isAdmin}
           onDragStart={(e) => onDragStart(e, folder.id, 'folder')}
           className={`flex items-center gap-1 py-1.5 px-2 hover:bg-slate-100 rounded-md cursor-pointer group transition-all relative ${dragOverId === folder.id ? 'bg-blue-100 ring-2 ring-blue-400 ring-inset' : ''}`}
           style={{ paddingLeft: `${level * 12 + 8}px` }}
@@ -225,23 +229,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSelectGuide, activeGuideId, 
           <Folder size={16} className={isExpanded ? "text-blue-500 fill-blue-50" : "text-slate-400"} />
           <span className="text-sm font-medium text-slate-700 truncate flex-grow">{folder.name}</span>
           
-          <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5">
-            <Menu shadow="md" width={180} position="right-start">
-              <Menu.Target>
-                <ActionIcon size="xs" variant="subtle" onClick={(e) => e.stopPropagation()}>
-                  <MoreVertical size={12} />
-                </ActionIcon>
-              </Menu.Target>
-              <Menu.Dropdown>
-                <Menu.Item leftSection={<Plus size={14} />} onClick={() => onNewGuide(folder.id)}>Nueva guía</Menu.Item>
-                <Menu.Item leftSection={<FolderPlus size={14} />} onClick={() => handleCreateFolder(folder.id)}>Nueva subcarpeta</Menu.Item>
-                <Menu.Item leftSection={<Edit2 size={14} />} onClick={() => handleRename(folder.id, 'folder', folder.name)}>Renombrar</Menu.Item>
-                <Menu.Item leftSection={<Copy size={14} />} onClick={() => handleCopy(folder.id, 'folder')}>Duplicar</Menu.Item>
-                <Menu.Divider />
-                <Menu.Item color="red" leftSection={<Trash2 size={14} />} onClick={() => handleDeleteFolder(folder.id)}>Eliminar</Menu.Item>
-              </Menu.Dropdown>
-            </Menu>
-          </div>
+          {isAdmin && (
+            <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5">
+              <Menu shadow="md" width={180} position="right-start">
+                <Menu.Target>
+                  <ActionIcon size="xs" variant="subtle" onClick={(e) => e.stopPropagation()}>
+                    <MoreVertical size={12} />
+                  </ActionIcon>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Item leftSection={<Plus size={14} />} onClick={() => onNewGuide(folder.id)}>Nueva guía</Menu.Item>
+                  <Menu.Item leftSection={<FolderPlus size={14} />} onClick={() => handleCreateFolder(folder.id)}>Nueva subcarpeta</Menu.Item>
+                  <Menu.Item leftSection={<Edit2 size={14} />} onClick={() => handleRename(folder.id, 'folder', folder.name)}>Renombrar</Menu.Item>
+                  <Menu.Item leftSection={<Copy size={14} />} onClick={() => handleCopy(folder.id, 'folder')}>Duplicar</Menu.Item>
+                  <Menu.Divider />
+                  <Menu.Item color="red" leftSection={<Trash2 size={14} />} onClick={() => handleDeleteFolder(folder.id)}>Eliminar</Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
+            </div>
+          )}
         </div>
 
         {isExpanded && (
@@ -260,7 +266,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSelectGuide, activeGuideId, 
     return (
       <div 
         key={guide.id}
-        draggable
+        draggable={isAdmin}
         onDragStart={(e) => onDragStart(e, guide.id, 'guide')}
         className={`flex items-center gap-2 py-1.5 px-2 hover:bg-slate-100 rounded-md cursor-pointer group transition-colors relative ${activeGuideId === guide.id ? 'bg-blue-50 text-blue-700 font-medium' : ''} ${isBeingDragged ? 'opacity-40' : ''}`}
         style={{ paddingLeft: `${level * 12 + 28}px` }}
@@ -269,21 +275,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSelectGuide, activeGuideId, 
         <FileText size={14} className={activeGuideId === guide.id ? 'text-blue-600' : 'text-slate-400'} />
         <span className="text-sm truncate flex-grow">{guide.title || "Sin título"}</span>
         
-        <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5">
-          <Menu shadow="md" width={160} position="right-start">
-            <Menu.Target>
-              <ActionIcon size="xs" variant="subtle" onClick={(e) => e.stopPropagation()}>
-                <MoreVertical size={12} />
-              </ActionIcon>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Item leftSection={<Edit2 size={14} />} onClick={() => handleRename(guide.id, 'guide', guide.title)}>Renombrar</Menu.Item>
-              <Menu.Item leftSection={<Copy size={14} />} onClick={() => handleCopy(guide.id, 'guide')}>Duplicar</Menu.Item>
-              <Menu.Divider />
-              <Menu.Item color="red" leftSection={<Trash2 size={14} />} onClick={() => handleDeleteGuide(guide.id)}>Eliminar</Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
-        </div>
+        {isAdmin && (
+          <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5">
+            <Menu shadow="md" width={160} position="right-start">
+              <Menu.Target>
+                <ActionIcon size="xs" variant="subtle" onClick={(e) => e.stopPropagation()}>
+                  <MoreVertical size={12} />
+                </ActionIcon>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Item leftSection={<Edit2 size={14} />} onClick={() => handleRename(guide.id, 'guide', guide.title)}>Renombrar</Menu.Item>
+                <Menu.Item leftSection={<Copy size={14} />} onClick={() => handleCopy(guide.id, 'guide')}>Duplicar</Menu.Item>
+                <Menu.Divider />
+                <Menu.Item color="red" leftSection={<Trash2 size={14} />} onClick={() => handleDeleteGuide(guide.id)}>Eliminar</Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+          </div>
+        )}
       </div>
     );
   };
@@ -313,11 +321,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSelectGuide, activeGuideId, 
                 <Home size={18} className="text-slate-500 hover:text-blue-600 transition-colors" />
               </ActionIcon>
             </Tooltip>
-            <Tooltip label="Nueva Carpeta Raíz" position="bottom">
-              <ActionIcon variant="light" color="blue" onClick={() => handleCreateFolder(null)}>
-                <FolderPlus size={18} />
-              </ActionIcon>
-            </Tooltip>
+            {isAdmin && (
+              <Tooltip label="Nueva Carpeta Raíz" position="bottom">
+                <ActionIcon variant="light" color="blue" onClick={() => handleCreateFolder(null)}>
+                  <FolderPlus size={18} />
+                </ActionIcon>
+              </Tooltip>
+            )}
           </div>
         </div>
         <TextInput
@@ -349,17 +359,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSelectGuide, activeGuideId, 
         </div>
       </ScrollArea>
 
-      <div className="p-3 border-t border-slate-100 bg-slate-50/50">
-        <Button 
-          fullWidth 
-          variant="light" 
-          size="xs" 
-          leftSection={<Plus size={16} />}
-          onClick={() => onNewGuide(null)}
-        >
-          Nueva guía rápida
-        </Button>
-      </div>
+      {isAdmin && (
+        <div className="p-3 border-t border-slate-100 bg-slate-50/50">
+          <Button 
+            fullWidth 
+            variant="light" 
+            size="xs" 
+            leftSection={<Plus size={16} />}
+            onClick={() => onNewGuide(null)}
+          >
+            Nueva guía rápida
+          </Button>
+        </div>
+      )}
 
       <Modal
         opened={!!dialog}

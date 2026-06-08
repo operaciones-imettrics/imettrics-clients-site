@@ -8,6 +8,8 @@ import { storage } from "../services/storage";
 import { exportGuideAsBackup } from "../services/markdownExporter";
 import debounce from "lodash.debounce";
 
+import { useAuth } from "../components/AuthProvider";
+
 class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: any}> {
   constructor(props: any) { super(props); this.state = { hasError: false, error: null }; }
   static getDerivedStateFromError(error: any) { return { hasError: true, error }; }
@@ -24,6 +26,8 @@ interface EditorPageProps {
 }
 
 export const EditorPage: React.FC<EditorPageProps> = ({ guideId, initialMarkdown, onBack }) => {
+  const { user } = useAuth();
+  const isAdmin = user?.customRole === 'admin';
   const [guide, setGuide] = useState<Guide | null>(null);
   const [isTocOpen, setIsTocOpen] = useState(() => {
     const stored = localStorage.getItem('isTocOpen');
@@ -36,14 +40,13 @@ export const EditorPage: React.FC<EditorPageProps> = ({ guideId, initialMarkdown
     const g = storage.getGuide(guideId);
     if (g) {
       setGuide(g);
-      // If the guide is brand new and has no title or content nodes, start in edit mode
-      if (!g.title) {
+      if (!g.title && isAdmin) {
         setIsEditing(true);
       } else {
         setIsEditing(false);
       }
     }
-  }, [guideId]);
+  }, [guideId, isAdmin]);
 
   // Save TOC open state to localStorage whenever it changes
   useEffect(() => {
@@ -91,9 +94,6 @@ export const EditorPage: React.FC<EditorPageProps> = ({ guideId, initialMarkdown
 
     const nodes = guide.content?.content || [];
     
-    // We want to export a structured, comprehensive representation of the full guide,
-    // translating all custom nodes, headings, paragraphs, lists, tables, callouts, and codeBlocks.
-    
     const getPlainNodeText = (node: any): string => {
       if (!node) return "";
       if (node.type === "text" && node.text) return node.text;
@@ -109,7 +109,6 @@ export const EditorPage: React.FC<EditorPageProps> = ({ guideId, initialMarkdown
       const traverse = (node: any) => {
         if (!node) return;
 
-        // Custom callout block
         if (node.type === "callout") {
           parsed.push({
             type: "callout",
@@ -119,7 +118,6 @@ export const EditorPage: React.FC<EditorPageProps> = ({ guideId, initialMarkdown
           return;
         }
 
-        // Custom parameter table block
         if (node.type === "parameterTable") {
           const rows: ParameterRow[] = node.attrs?.rows ? JSON.parse(node.attrs.rows as string) : [];
           parsed.push({
@@ -133,7 +131,6 @@ export const EditorPage: React.FC<EditorPageProps> = ({ guideId, initialMarkdown
           return;
         }
 
-        // Custom collapsible/details block
         if (node.type === "collapsibleBlock") {
           parsed.push({
             type: "collapsible",
@@ -143,7 +140,6 @@ export const EditorPage: React.FC<EditorPageProps> = ({ guideId, initialMarkdown
           return;
         }
 
-        // General headings (H1, H2, H3, H4, etc.)
         if (node.type === "heading") {
           parsed.push({
             type: "heading",
@@ -153,7 +149,6 @@ export const EditorPage: React.FC<EditorPageProps> = ({ guideId, initialMarkdown
           return;
         }
 
-        // Paragraphs
         if (node.type === "paragraph") {
           const text = getPlainNodeText(node).trim();
           if (text) {
@@ -165,7 +160,6 @@ export const EditorPage: React.FC<EditorPageProps> = ({ guideId, initialMarkdown
           return;
         }
 
-        // Code blocks
         if (node.type === "codeBlock") {
           parsed.push({
             type: "codeBlock",
@@ -175,7 +169,6 @@ export const EditorPage: React.FC<EditorPageProps> = ({ guideId, initialMarkdown
           return;
         }
 
-        // Bullet or Ordered lists
         if (node.type === "bulletList" || node.type === "orderedList") {
           const items: string[] = [];
           if (node.content && Array.isArray(node.content)) {
@@ -192,7 +185,6 @@ export const EditorPage: React.FC<EditorPageProps> = ({ guideId, initialMarkdown
           return;
         }
 
-        // If it is a generic wrapper node or a custom block, dig deeper
         if (node.content && Array.isArray(node.content)) {
           node.content.forEach(traverse);
         }
@@ -202,10 +194,8 @@ export const EditorPage: React.FC<EditorPageProps> = ({ guideId, initialMarkdown
       return parsed;
     };
 
-    // Standard structural payload for downstream usage
     const parsedStructure = parseContentBlocks(nodes);
 
-    // Grouping specifically into "events" for backward compatibility or direct structured setups
     const exportedEvents: any[] = [];
     let currentEvent: any = null;
 
@@ -216,12 +206,11 @@ export const EditorPage: React.FC<EditorPageProps> = ({ guideId, initialMarkdown
           level: block.level,
           dataLayer: "",
           parameters: [],
-          elements: [] // all blocks belonging to this heading section
+          elements: []
         };
         exportedEvents.push(currentEvent);
       } else {
         if (!currentEvent) {
-          // Fallback if there are blocks before any heading
           currentEvent = {
             name: "General",
             level: 0,
@@ -232,7 +221,6 @@ export const EditorPage: React.FC<EditorPageProps> = ({ guideId, initialMarkdown
           exportedEvents.push(currentEvent);
         }
         
-        // Associate nested content
         currentEvent.elements.push(block);
         if (block.type === "codeBlock") {
           currentEvent.dataLayer = block.code;
@@ -250,7 +238,7 @@ export const EditorPage: React.FC<EditorPageProps> = ({ guideId, initialMarkdown
         level: e.level,
         dataLayer: e.dataLayer || "",
         parameters: e.parameters || [],
-        elements: e.elements || [] // Now includes paragraphs, subheadings, callouts, lists, etc.
+        elements: e.elements || []
       })),
     };
 
@@ -265,7 +253,9 @@ export const EditorPage: React.FC<EditorPageProps> = ({ guideId, initialMarkdown
     URL.revokeObjectURL(url);
   };
 
-  const toggleEdit = () => setIsEditing(!isEditing);
+  const toggleEdit = () => {
+    if (isAdmin) setIsEditing(!isEditing);
+  };
 
   if (!guide) return null;
 
@@ -326,12 +316,14 @@ export const EditorPage: React.FC<EditorPageProps> = ({ guideId, initialMarkdown
             </Menu.Dropdown>
           </Menu>
           {/* Edit / Publish toggle button */}
-          <button
-            onClick={toggleEdit}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-          >
-            {isEditing ? 'Publicar' : 'Editar'}
-          </button>
+          {isAdmin && (
+            <button
+              onClick={toggleEdit}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+            >
+              {isEditing ? 'Publicar' : 'Editar'}
+            </button>
+          )}
         </div>
       </header>
 

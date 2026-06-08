@@ -5,8 +5,9 @@ import type { Guide, Folder as FolderType } from "../types";
 import { storage } from "../services/storage";
 import { importGitBook } from "../services/gitbookImporter";
 import { parseGitbookMarkdown } from "../lib/gitbookParser";
-import { v4 as uuidv4 } from "uuid";
 import { useClientContext } from "../contexts/ClientContext";
+import { useAuth } from "../components/AuthProvider";
+import { v4 as uuidv4 } from "uuid";
 
 interface GuideListProps {
   onSelectGuide: (id: string) => void;
@@ -24,6 +25,8 @@ export const GuideList: React.FC<GuideListProps> = ({
   );
   
   const { selectedClientId, setSelectedClientId, clients } = useClientContext();
+  const { user } = useAuth();
+  const isAdmin = user?.customRole === 'admin';
 
   // States for GitBook Import
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -443,30 +446,32 @@ export const GuideList: React.FC<GuideListProps> = ({
               {currentFolder ? "Gestiona los proyectos y guías de este cliente" : "Explora tus clientes y proyectos de medición"}
             </p>
           </div>
-          <div className="flex gap-3">
-            <Button
-              leftSection={<BookOpen size={18} />}
-              onClick={() => {
-                setImportStatus("idle");
-                setImportProgress(0);
-                setImportError("");
-                setImportStats(null);
-                setIsImportModalOpen(true);
-              }}
-              variant="outline"
-              color="blue"
-            >
-              Importar Guías
-            </Button>
-            <Button 
-              leftSection={<Plus size={18} />} 
-              onClick={() => onNewGuide(currentFolderId)}
-              variant="filled"
-              color="blue"
-            >
-              Nueva guía
-            </Button>
-          </div>
+          {isAdmin && (
+            <div className="flex gap-3">
+              <Button
+                leftSection={<BookOpen size={18} />}
+                onClick={() => {
+                  setImportStatus("idle");
+                  setImportProgress(0);
+                  setImportError("");
+                  setImportStats(null);
+                  setIsImportModalOpen(true);
+                }}
+                variant="outline"
+                color="blue"
+              >
+                Importar Guías
+              </Button>
+              <Button 
+                leftSection={<Plus size={18} />} 
+                onClick={() => onNewGuide(currentFolderId)}
+                variant="filled"
+                color="blue"
+              >
+                Nueva guía
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2 py-2 px-4 bg-slate-100/50 rounded-lg border border-slate-200/60">
@@ -530,12 +535,14 @@ export const GuideList: React.FC<GuideListProps> = ({
                 <Clock size={12} />
                 <span>{formatDate(guide.updatedAt)}</span>
               </div>
-              <button
-                onClick={(e) => openDeleteModal(e, guide.id)}
-                className="absolute top-4 right-4 p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-              >
-                <Trash2 size={16} />
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={(e) => openDeleteModal(e, guide.id)}
+                  className="absolute top-4 right-4 p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
             </div>
           ))}
         </div>
