@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Modal, Button, Text, Group, Progress } from '@mantine/core';
+import { Modal, Button, Text, Group, Progress, Select } from '@mantine/core';
 import { Plus, FileText, Trash2, Clock, Folder, ChevronRight, BookOpen, Upload, FolderOpen, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
-import type { Guide, Folder as FolderType, Client } from "../types";
+import type { Guide, Folder as FolderType } from "../types";
 import { storage } from "../services/storage";
 import { importGitBook } from "../services/gitbookImporter";
 import { parseGitbookMarkdown } from "../lib/gitbookParser";
 import { v4 as uuidv4 } from "uuid";
-import { api } from "../lib/api";
 import { useClientContext } from "../contexts/ClientContext";
-import { Select } from "@mantine/core";
 
 interface GuideListProps {
   onSelectGuide: (id: string) => void;
@@ -25,15 +23,7 @@ export const GuideList: React.FC<GuideListProps> = ({
     () => localStorage.getItem("current_folder_id")
   );
   
-  const { selectedClientId, setSelectedClientId } = useClientContext();
-  const [clients, setClients] = useState<Client[]>([]);
-
-  useEffect(() => {
-    // Attempt to fetch clients; if it fails (not admin), we just ignore it
-    api.get<Client[]>('/api/clients')
-      .then(setClients)
-      .catch(() => setClients([]));
-  }, []);
+  const { selectedClientId, setSelectedClientId, clients } = useClientContext();
 
   // States for GitBook Import
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);

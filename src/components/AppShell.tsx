@@ -14,10 +14,10 @@ const NAV_ITEMS = [
 ];
 
 export const AppShell: React.FC = () => {
-  const { clients, selectedClientId } = useClientContext() as any;
+  const { clients, selectedClientId } = useClientContext();
   const { user } = useAuth();
   const isAdmin = user?.customRole === 'admin';
-  const workspace = clients?.find((c: any) => c.id === selectedClientId);
+  const workspace = clients?.find((c) => c.id === selectedClientId);
 
   const handleSignOut = () => signOut(auth);
 

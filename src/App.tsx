@@ -67,6 +67,7 @@ function NoAccessPage() {
 // Global Router
 function AppRouter() {
   const { user } = useAuth();
+  const { setClients } = useClientContext();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
 
@@ -74,6 +75,7 @@ function AppRouter() {
     if (user) {
       api.get<Client[]>('/api/clients/my-workspaces')
         .then(data => {
+            setClients(data); // Populate shared context for all components
             const currentPath = window.location.pathname;
             // If they are on the root or login, auto redirect
             if (currentPath === '/') {
@@ -92,7 +94,7 @@ function AppRouter() {
     } else {
       setLoading(false);
     }
-  }, [user, navigate]);
+  }, [user, navigate, setClients]);
 
   if (!user) {
     return (
