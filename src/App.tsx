@@ -78,12 +78,15 @@ function AppRouter() {
             const currentPath = window.location.pathname;
             // If they are on the root or login, auto redirect
             if (currentPath === '/') {
-                if (data.length === 0) {
-                    // No workspaces at all: show no-access page
+                if (user.customRole === 'admin') {
+                    // Admins always go to admin portal, regardless of workspace count
+                    navigate('/admin');
+                } else if (data.length === 0) {
+                    // No workspaces assigned: show no-access page
                     navigate('/no-access');
-                } else if (data.length === 1 && user.customRole !== 'admin') {
+                } else if (data.length === 1) {
                     navigate(`/workspace/${data[0].id}`);
-                } else if (data.length > 0 || user.customRole === 'admin') {
+                } else {
                     navigate('/admin');
                 }
             }
