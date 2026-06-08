@@ -55,7 +55,6 @@ function NoAccessPage() {
         <Text c="dimmed" mb="xl">
           Tu cuenta no tiene acceso a ningún workspace. Por favor contactá al equipo de iMettrics para que te asignen los permisos correspondientes.
         </Text>
-        <Text c="dimmed" size="sm" mb="lg">📧 contacto@imettrics.com</Text>
         <Button variant="outline" color="gray" onClick={handleSignOut} fullWidth>
           Cerrar sesión
         </Button>

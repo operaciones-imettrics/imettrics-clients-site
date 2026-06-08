@@ -35,9 +35,6 @@ export const AppShell: React.FC = () => {
               className="h-7 w-auto object-contain shrink-0 max-h-7"
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
-            <span className="text-slate-300 text-xs font-semibold uppercase tracking-widest">
-              iMettrics
-            </span>
           </div>
           {workspace && (
             <div className="bg-slate-800/60 rounded-lg px-3 py-2">

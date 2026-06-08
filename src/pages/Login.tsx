@@ -28,9 +28,9 @@ export function Login() {
     <Container size={420} my={40} className="h-screen flex flex-col justify-center">
       <div className="flex flex-col items-center mb-6">
         <img 
-          src="https://imettrics.com/wp-content/uploads/2023/12/Favicon.png" 
+          src="https://imettrics.com/wp-content/uploads/elementor/thumbs/Logo-iMettrics-sticky-ro55wralkc88s4fvi5tu9l2jqo274cystymc231vli.png" 
           alt="iMettrics" 
-          className="h-16 w-16 object-contain mb-4"
+          className="h-10 w-auto object-contain mb-6"
         />
         <Title ta="center" className="text-slate-800">
           iMettrics Portal
