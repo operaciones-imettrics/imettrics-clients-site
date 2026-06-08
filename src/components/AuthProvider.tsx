@@ -23,7 +23,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
       if (u) {
-        const tokenResult = await u.getIdTokenResult();
+        // Force-refresh token to pick up any newly-set custom claims (e.g. admin role)
+        const tokenResult = await u.getIdTokenResult(true);
         const authUser = u as AuthUser;
         authUser.customRole = tokenResult.claims.role as string;
         setUser(authUser);
