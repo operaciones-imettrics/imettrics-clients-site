@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate } from "react-router-dom";
-import { MantineProvider, createTheme, Loader } from '@mantine/core';
+import { MantineProvider, createTheme, Loader, Text, Title, Paper, Button } from '@mantine/core';
 import '@mantine/core/styles.css';
 
 import { AuthProvider, useAuth } from './components/AuthProvider';
@@ -44,10 +44,31 @@ function WorkspaceMiddleware() {
   return <AppShell />;
 }
 
+// No-access screen
+function NoAccessPage() {
+  const handleSignOut = () => import('firebase/auth').then(({ signOut }) => import('./lib/firebase').then(({ auth }) => signOut(auth)));
+  return (
+    <div className="h-screen flex items-center justify-center bg-slate-950">
+      <Paper p="xl" radius="md" className="max-w-md w-full text-center" style={{ backgroundColor: '#1e293b', border: '1px solid #334155' }}>
+        <div className="text-5xl mb-4">🔒</div>
+        <Title order={3} c="white" mb="sm">Sin acceso</Title>
+        <Text c="dimmed" mb="xl">
+          Tu cuenta no tiene acceso a ningún workspace. Por favor contactá al equipo de iMettrics para que te asignen los permisos correspondientes.
+        </Text>
+        <Text c="dimmed" size="sm" mb="lg">📧 contacto@imettrics.com</Text>
+        <Button variant="outline" color="gray" onClick={handleSignOut} fullWidth>
+          Cerrar sesión
+        </Button>
+      </Paper>
+    </div>
+  );
+}
+
 // Global Router
 function AppRouter() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
@@ -56,14 +77,20 @@ function AppRouter() {
             const currentPath = window.location.pathname;
             // If they are on the root or login, auto redirect
             if (currentPath === '/') {
-                if (data.length === 1 && user.customRole !== 'admin') {
+                if (data.length === 0) {
+                    // No workspaces at all: show no-access page
+                    navigate('/no-access');
+                } else if (data.length === 1 && user.customRole !== 'admin') {
                     navigate(`/workspace/${data[0].id}`);
                 } else if (data.length > 0 || user.customRole === 'admin') {
                     navigate('/admin');
                 }
             }
         })
-        .catch(console.error);
+        .catch(console.error)
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
     }
   }, [user, navigate]);
 
@@ -75,15 +102,20 @@ function AppRouter() {
     );
   }
 
+  if (loading) {
+    return <div className="h-screen flex items-center justify-center"><Loader /></div>;
+  }
+
   return (
     <Routes>
       <Route path="/" element={<div className="h-screen flex items-center justify-center"><Loader /></div>} />
+      <Route path="/no-access" element={<NoAccessPage />} />
       <Route path="/admin" element={<AdminPortal />} />
       <Route path="/workspace/:clientId" element={<WorkspaceMiddleware />}>
          <Route index element={<Navigate to="guides" replace />} />
          <Route path="guides" element={<GuidesModule />} />
          {/* Future modules go here */}
-         <Route path="settings" element={<WorkspaceSettings />} />
+         <Route path="settings" element={user?.customRole === 'admin' ? <WorkspaceSettings /> : <Navigate to="guides" replace />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

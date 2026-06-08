@@ -5,6 +5,7 @@ import { Tooltip } from '@mantine/core';
 import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { useClientContext } from '../contexts/ClientContext';
+import { useAuth } from './AuthProvider';
 
 const NAV_ITEMS = [
   { to: 'guides', label: 'Guías de Medición', icon: BookOpen, active: true },
@@ -14,6 +15,8 @@ const NAV_ITEMS = [
 
 export const AppShell: React.FC = () => {
   const { clients, selectedClientId } = useClientContext() as any;
+  const { user } = useAuth();
+  const isAdmin = user?.customRole === 'admin';
   const workspace = clients?.find((c: any) => c.id === selectedClientId);
 
   const handleSignOut = () => signOut(auth);
@@ -27,9 +30,10 @@ export const AppShell: React.FC = () => {
         <div className="px-4 pt-5 pb-4 border-b border-slate-800">
           <div className="flex items-center gap-3 mb-4">
             <img
-              src="https://imettrics.com/wp-content/uploads/2023/12/Favicon.png"
+              src="https://imettrics.com/wp-content/uploads/elementor/thumbs/Logo-iMettrics-sticky-ro55wralkc88s4fvi5tu9l2jqo274cystymc231vli.png"
               alt="iMettrics"
-              className="h-7 w-7 object-contain shrink-0"
+              className="h-7 w-auto object-contain shrink-0 max-h-7"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
             <span className="text-slate-300 text-xs font-semibold uppercase tracking-widest">
               iMettrics
@@ -76,26 +80,30 @@ export const AppShell: React.FC = () => {
 
         {/* Bottom Actions */}
         <div className="px-3 pb-4 flex flex-col gap-1 border-t border-slate-800 pt-3">
-          <NavLink
-            to="/admin"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-all duration-150"
-          >
-            <ChevronLeft size={18} />
-            Panel de Admin
-          </NavLink>
-          <NavLink
-            to="settings"
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
-                isActive
-                  ? 'bg-slate-700 text-white'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
-              }`
-            }
-          >
-            <Settings size={18} />
-            Configuración
-          </NavLink>
+          {isAdmin && (
+            <NavLink
+              to="/admin"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-all duration-150"
+            >
+              <ChevronLeft size={18} />
+              Panel de Admin
+            </NavLink>
+          )}
+          {isAdmin && (
+            <NavLink
+              to="settings"
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+                  isActive
+                    ? 'bg-slate-700 text-white'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                }`
+              }
+            >
+              <Settings size={18} />
+              Configuración
+            </NavLink>
+          )}
           <button
             onClick={handleSignOut}
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-500/70 hover:text-red-400 hover:bg-red-950/40 transition-all duration-150 w-full text-left"
