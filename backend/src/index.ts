@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import './firebase';
-import { authMiddleware } from './middleware/auth';
+import { authMiddleware, requireClientAccess } from './middleware/auth';
 import guidesRouter from './routes/guides';
 import clientsRouter from './routes/clients';
 import usersRouter from './routes/users';
@@ -47,9 +47,9 @@ app.get('/api/health', (req, res) => {
 // App Routes
 app.use('/api/clients', authMiddleware, clientsRouter);
 app.use('/api/clients/:clientId/users', authMiddleware, usersRouter);
-app.use('/api/guides', authMiddleware, guidesRouter);
-app.use('/api/folders', authMiddleware, foldersRouter);
-app.use('/api/storage', authMiddleware, storageRouter);
+app.use('/api/guides', authMiddleware, requireClientAccess, guidesRouter);
+app.use('/api/folders', authMiddleware, requireClientAccess, foldersRouter);
+app.use('/api/storage', authMiddleware, requireClientAccess, storageRouter);
 
 const PORT = parseInt(process.env.PORT as string) || 8080;
 app.listen(PORT, '0.0.0.0', () => {

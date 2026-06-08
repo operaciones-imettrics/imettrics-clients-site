@@ -5,8 +5,12 @@ const BASE_URL = import.meta.env.VITE_API_URL || '';
 class ApiClient {
   private targetClientId: string | null = null;
 
-  setClientId(clientId: string | null) {
-    this.targetClientId = clientId;
+  setClientId(clientId: string | null | undefined) {
+    if (clientId === "null" || clientId === "undefined" || !clientId) {
+      this.targetClientId = null;
+    } else {
+      this.targetClientId = clientId;
+    }
   }
 
   private async getHeaders(): Promise<Headers> {

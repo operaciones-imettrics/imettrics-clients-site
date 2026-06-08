@@ -7,14 +7,7 @@ const router = Router();
 // Get Folders
 router.get('/', async (req: AuthenticatedRequest, res) => {
     try {
-        const { clientId, role } = req.user!;
         let targetClientId = req.query.clientId as string;
-        
-        if (role !== 'admin') {
-            targetClientId = clientId;
-        } else if (!targetClientId) {
-            targetClientId = clientId;
-        }
 
         if (!targetClientId) {
              res.status(400).json({ error: 'Missing clientId' });
@@ -32,14 +25,7 @@ router.get('/', async (req: AuthenticatedRequest, res) => {
 // Create Folder
 router.post('/', async (req: AuthenticatedRequest, res) => {
     try {
-        const { clientId, role } = req.user!;
         let targetClientId = req.body.clientId || req.query.clientId as string;
-        
-        if (role !== 'admin') {
-            targetClientId = clientId;
-        } else if (!targetClientId) {
-            targetClientId = clientId;
-        }
 
         if (!targetClientId) {
              res.status(400).json({ error: 'Missing clientId' });
@@ -60,14 +46,7 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
 router.put('/:id', async (req: AuthenticatedRequest, res) => {
     try {
         const id = req.params.id as string;
-        const { clientId, role } = req.user!;
         let targetClientId = req.body.clientId || req.query.clientId as string;
-        
-        if (role !== 'admin') {
-            targetClientId = clientId;
-        } else if (!targetClientId) {
-            targetClientId = clientId;
-        }
 
         if (!targetClientId) {
              res.status(400).json({ error: 'Missing clientId' });
@@ -86,14 +65,7 @@ router.put('/:id', async (req: AuthenticatedRequest, res) => {
 router.delete('/:id', async (req: AuthenticatedRequest, res) => {
     try {
         const id = req.params.id as string;
-        const { clientId, role } = req.user!;
         let targetClientId = req.query.clientId as string;
-        
-        if (role !== 'admin') {
-            targetClientId = clientId;
-        } else if (!targetClientId) {
-            targetClientId = clientId;
-        }
 
         if (!targetClientId) {
              res.status(400).json({ error: 'Missing clientId' });

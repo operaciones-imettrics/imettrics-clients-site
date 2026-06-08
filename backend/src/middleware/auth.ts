@@ -34,8 +34,8 @@ export const requireAdmin = (req: AuthenticatedRequest, res: Response, next: Nex
 };
 
 export const requireClientAccess = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    // Determine target client ID from URL params, body, or headers
-    const targetClientId = req.params.clientId || req.body.clientId || req.headers['x-client-id'];
+    // Determine target client ID from URL params, body, query, or headers
+    const targetClientId = req.params.clientId || req.body.clientId || req.query.clientId || req.headers['x-client-id'];
 
     if (!targetClientId && req.user?.role !== 'admin') {
          res.status(403).json({ error: 'Forbidden: Missing clientId context' });

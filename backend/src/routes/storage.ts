@@ -10,12 +10,11 @@ router.post('/signed-url', async (req: AuthenticatedRequest, res: Response) => {
         const { filename, action } = req.body;
         const { clientId, role } = req.user!;
         
-        let pathClientId = req.body.clientId || clientId;
+        let pathClientId = req.body.clientId;
 
-        // Validation based on RBAC multi-tenant strategy
-        if (role !== 'admin' && pathClientId !== clientId) {
-            res.status(403).json({ error: 'Access denied to this folder' });
-            return;
+        if (!pathClientId) {
+             res.status(400).json({ error: 'Missing clientId' });
+             return;
         }
 
         const bucket = storage.bucket();
