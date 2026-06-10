@@ -43,6 +43,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSelectGuide, activeGuideId, 
   });
   const [draggedItem, setDraggedItem] = useState<{ id: string; type: 'guide' | 'folder' } | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [dragPosition, setDragPosition] = useState<'before' | 'after' | 'inside' | null>(null);
 
   const [isCollapsed, setIsCollapsed] = useState(() => {
     return localStorage.getItem('guides_sidebar_collapsed') === 'true';
@@ -225,39 +226,67 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSelectGuide, activeGuideId, 
     e.dataTransfer.effectAllowed = "move";
   };
 
-  const onDragOver = (e: React.DragEvent, id: string | null) => {
+  const onDragOver = (e: React.DragEvent, id: string | null, targetType: 'guide' | 'folder' | null) => {
     e.preventDefault();
     e.stopPropagation();
     setDragOverId(id);
+    
+    if (id !== null) {
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      
+      if (targetType === 'folder') {
+        if (y < rect.height * 0.25) setDragPosition('before');
+        else if (y > rect.height * 0.75) setDragPosition('after');
+        else setDragPosition('inside');
+      } else {
+        if (y < rect.height * 0.5) setDragPosition('before');
+        else setDragPosition('after');
+      }
+    } else {
+      setDragPosition('inside');
+    }
+    
     e.dataTransfer.dropEffect = "move";
   };
 
   const onDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOverId(null);
+    setDragPosition(null);
   };
 
-  const onDrop = (e: React.DragEvent, targetFolderId: string | null) => {
+  const onDrop = (e: React.DragEvent, targetId: string | null, targetType: 'guide' | 'folder' | null) => {
     e.preventDefault();
     e.stopPropagation();
-    setDragOverId(null);
+    
     const id = e.dataTransfer.getData("id");
-    const type = e.dataTransfer.getData("type") as 'guide' | 'folder';
+    const sourceType = e.dataTransfer.getData("type") as 'guide' | 'folder';
 
-    if (type === 'guide') {
-      storage.moveGuide(id, targetFolderId);
-    } else {
-      if (id !== targetFolderId) {
-        storage.moveFolder(id, targetFolderId);
+    if (dragPosition === 'inside' && targetType === 'folder') {
+      if (sourceType === 'guide') {
+        storage.moveGuide(id, targetId);
+      } else {
+        if (id !== targetId) storage.moveFolder(id, targetId);
+      }
+      if (targetId) {
+        setExpandedFolders(prev => new Set(prev).add(targetId));
+      }
+    } else if (targetId !== null && targetType !== null && dragPosition !== 'inside' && dragPosition !== null) {
+      storage.reorderItems(id, sourceType, targetId, targetType, dragPosition as 'before' | 'after');
+    } else if (targetId === null) {
+      // Dropped on root
+      if (sourceType === 'guide') {
+        storage.moveGuide(id, null);
+      } else {
+        storage.moveFolder(id, null);
       }
     }
+
+    setDragOverId(null);
+    setDragPosition(null);
     setDraggedItem(null);
     refreshData();
-    
-    // Auto-expand target folder on drop
-    if (targetFolderId) {
-      setExpandedFolders(prev => new Set(prev).add(targetFolderId));
-    }
   };
 
   const filteredGuides = guides.filter(g => 
@@ -266,22 +295,31 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSelectGuide, activeGuideId, 
 
   const renderFolder = (folder: FolderType, level: number = 0) => {
     const isExpanded = expandedFolders.has(folder.id);
-    const childFolders = folders.filter(f => f.parentId === folder.id);
-    const folderGuides = filteredGuides.filter(g => g.folderId === folder.id);
+    const childFolders = folders.filter(f => f.parentId === folder.id).map(f => ({ ...f, itemType: 'folder' as const }));
+    const folderGuides = filteredGuides.filter(g => g.folderId === folder.id).map(g => ({ ...g, itemType: 'guide' as const }));
+    const children = [...childFolders, ...folderGuides].sort((a, b) => (a.order || 0) - (b.order || 0));
+    
     const isBeingDragged = draggedItem?.id === folder.id && draggedItem?.type === 'folder';
+
+    const isTarget = dragOverId === folder.id;
+    const dropIndicatorClass = isTarget ? (
+      dragPosition === 'before' ? 'border-t-2 border-t-blue-500' :
+      dragPosition === 'after' ? 'border-b-2 border-b-blue-500' :
+      'bg-blue-100 ring-2 ring-blue-400 ring-inset'
+    ) : '';
 
     return (
       <div 
         key={folder.id} 
         className={`select-none ${isBeingDragged ? 'opacity-40' : ''}`}
-        onDragOver={(e) => onDragOver(e, folder.id)}
+        onDragOver={(e) => onDragOver(e, folder.id, 'folder')}
         onDragLeave={onDragLeave}
-        onDrop={(e) => onDrop(e, folder.id)}
+        onDrop={(e) => onDrop(e, folder.id, 'folder')}
       >
         <div 
           draggable={isAdmin}
           onDragStart={(e) => onDragStart(e, folder.id, 'folder')}
-          className={`flex items-center gap-1 py-1.5 px-2 hover:bg-slate-100 rounded-md cursor-pointer group transition-all relative ${dragOverId === folder.id ? 'bg-blue-100 ring-2 ring-blue-400 ring-inset' : ''}`}
+          className={`flex items-center gap-1 py-1.5 px-2 hover:bg-slate-100 rounded-md cursor-pointer group transition-all relative ${dropIndicatorClass}`}
           style={{ paddingLeft: `${level * 12 + 8}px` }}
           onClick={() => toggleFolder(folder.id)}
         >
@@ -312,8 +350,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSelectGuide, activeGuideId, 
 
         {isExpanded && (
           <div className="mt-0.5">
-            {childFolders.map(f => renderFolder(f, level + 1))}
-            {folderGuides.map(g => renderGuide(g, level + 1))}
+            {children.map(item => item.itemType === 'folder' 
+              ? renderFolder(item as any, level + 1) 
+              : renderGuide(item as any, level + 1))}
           </div>
         )}
       </div>
@@ -323,12 +362,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSelectGuide, activeGuideId, 
   const renderGuide = (guide: Guide, level: number = 0) => {
     const isBeingDragged = draggedItem?.id === guide.id && draggedItem?.type === 'guide';
     
+    const isTarget = dragOverId === guide.id;
+    const dropIndicatorClass = isTarget ? (
+      dragPosition === 'before' ? 'border-t-2 border-t-blue-500' :
+      'border-b-2 border-b-blue-500'
+    ) : '';
+
     return (
       <div 
         key={guide.id}
         draggable={isAdmin}
         onDragStart={(e) => onDragStart(e, guide.id, 'guide')}
-        className={`flex items-center gap-2 py-1.5 px-2 hover:bg-slate-100 rounded-md cursor-pointer group transition-colors relative ${activeGuideId === guide.id ? 'bg-blue-50 text-blue-700 font-medium' : ''} ${isBeingDragged ? 'opacity-40' : ''}`}
+        onDragOver={(e) => onDragOver(e, guide.id, 'guide')}
+        onDragLeave={onDragLeave}
+        onDrop={(e) => onDrop(e, guide.id, 'guide')}
+        className={`flex items-center gap-2 py-1.5 px-2 hover:bg-slate-100 rounded-md cursor-pointer group transition-colors relative ${activeGuideId === guide.id ? 'bg-blue-50 text-blue-700 font-medium' : ''} ${isBeingDragged ? 'opacity-40' : ''} ${dropIndicatorClass}`}
         style={{ paddingLeft: `${level * 12 + 28}px` }}
         onClick={() => onSelectGuide(guide.id)}
       >
@@ -356,8 +404,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSelectGuide, activeGuideId, 
     );
   };
 
-  const rootFolders = folders.filter(f => !f.parentId);
-  const unclassifiedGuides = filteredGuides.filter(g => !g.folderId);
+  const rootFolders = folders.filter(f => !f.parentId).map(f => ({ ...f, itemType: 'folder' as const }));
+  const unclassifiedGuides = filteredGuides.filter(g => !g.folderId).map(g => ({ ...g, itemType: 'guide' as const }));
+  const rootItems = [...rootFolders, ...unclassifiedGuides].sort((a, b) => (a.order || 0) - (b.order || 0));
 
   return (
     <div 
@@ -452,21 +501,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSelectGuide, activeGuideId, 
         {(!isCollapsed || isHovered) ? (
           <ScrollArea 
             className="flex-grow p-2 pt-0" 
-            onDragOver={(e) => onDragOver(e, null)} 
+            onDragOver={(e) => onDragOver(e, null, null)} 
             onDragLeave={onDragLeave}
-            onDrop={(e) => onDrop(e, null)}
+            onDrop={(e) => onDrop(e, null, null)}
           >
             <div className="space-y-1">
-              {rootFolders.map(f => renderFolder(f))}
-              
-              <div className="mt-6">
-                <div className="px-2 mb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-                  <span>Sin clasificar</span>
-                </div>
-                <div className="space-y-0.5">
-                  {unclassifiedGuides.map(g => renderGuide(g))}
-                </div>
-              </div>
+              {rootItems.map(item => item.itemType === 'folder'
+                ? renderFolder(item as any)
+                : renderGuide(item as any)
+              )}
             </div>
           </ScrollArea>
         ) : (
