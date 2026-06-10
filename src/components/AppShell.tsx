@@ -38,7 +38,7 @@ export const AppShell: React.FC = () => {
     <div className="flex h-screen overflow-hidden bg-slate-100">
       {/* Sidebar Wrapper to prevent layout shift */}
       <div 
-        className={`shrink-0 transition-all duration-300 ease-in-out ${
+        className={`shrink-0 transition-all duration-300 ease-in-out no-print ${
           isCollapsed ? 'w-16' : 'w-60'
         }`}
       >
