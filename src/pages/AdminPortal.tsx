@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { api } from "../lib/api";
 import type { Client } from "../types";
-import { Folder, Plus, LogOut, Link, MoreVertical, Edit2, Pause, Play, Trash2 } from "lucide-react";
+import { Folder, Plus, LogOut, Link, MoreVertical, Edit2, Pause, Play, Trash2, Search } from "lucide-react";
 import { auth } from "../lib/firebase";
-import { Modal, Button, TextInput, ColorInput, Menu, ActionIcon } from '@mantine/core';
+import { Modal, Button, TextInput, ColorInput, Menu, ActionIcon, Switch } from '@mantine/core';
 import { useNavigate } from 'react-router-dom';
 
 export const AdminPortal: React.FC = () => {
@@ -22,6 +22,9 @@ export const AdminPortal: React.FC = () => {
   const [deletingClient, setDeletingClient] = useState<Client | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
+  const [search, setSearch] = useState("");
+  const [showOnHold, setShowOnHold] = useState(true);
+
   const fetchClients = () => {
     api.get<Client[]>('/api/clients')
       .then(setClients)
@@ -31,6 +34,14 @@ export const AdminPortal: React.FC = () => {
   useEffect(() => {
     fetchClients();
   }, []);
+
+  const filteredClients = clients
+    .filter(c => {
+      const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase());
+      const matchesStatus = showOnHold ? true : c.status !== 'hold';
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
@@ -119,6 +130,32 @@ export const AdminPortal: React.FC = () => {
         </Button>
       </header>
 
+      {/* Search & Filter toolbar */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center mb-8">
+        <div className="relative flex-1 max-w-sm">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Buscar workspace..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+        <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-slate-600 font-medium bg-white border border-slate-200 rounded-lg px-4 py-2 shadow-sm hover:bg-slate-50 transition-colors">
+          <input
+            type="checkbox"
+            checked={showOnHold}
+            onChange={(e) => setShowOnHold(e.target.checked)}
+            className="w-4 h-4 accent-amber-500 rounded"
+          />
+          Mostrar proyectos On Hold
+        </label>
+        <p className="text-xs text-slate-400 ml-auto">
+          {filteredClients.length} workspace{filteredClients.length !== 1 ? 's' : ''}
+        </p>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Create workspace card */}
         <button
@@ -131,8 +168,8 @@ export const AdminPortal: React.FC = () => {
           <h3 className="font-bold text-slate-700 group-hover:text-blue-700">Crear Workspace</h3>
         </button>
 
-        {/* Existing workspaces */}
-        {clients.map((client) => (
+        {/* Existing workspaces - sorted alphabetically, filtered by search & status */}
+        {filteredClients.map((client) => (
           <div
             key={client.id}
             onClick={() => navigate(`/workspace/${client.id}`)}
