@@ -15,6 +15,7 @@ import { AppShell } from "./components/AppShell";
 import { GuidesModule } from "./pages/GuidesModule";
 import { AdminPortal } from "./pages/AdminPortal";
 import { WorkspaceSettings } from "./pages/WorkspaceSettings";
+import { WorkspaceLanding } from "./pages/WorkspaceLanding";
 
 const theme = createTheme({
   primaryColor: 'blue',
@@ -116,7 +117,7 @@ function AppRouter() {
       <Route path="/no-access" element={<NoAccessPage />} />
       <Route path="/admin" element={<AdminPortal />} />
       <Route path="/workspace/:clientId" element={<WorkspaceMiddleware />}>
-         <Route index element={<Navigate to="guides" replace />} />
+         <Route index element={<WorkspaceLanding />} />
          <Route path="guides" element={<GuidesModule />} />
          {/* Future modules go here */}
          <Route path="settings" element={user?.customRole === 'admin' ? <WorkspaceSettings /> : <Navigate to="guides" replace />} />
