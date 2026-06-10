@@ -5,6 +5,7 @@ export interface Client {
   name: string;
   logo_url?: string;
   primary_color?: string;
+  status?: 'active' | 'hold';
 }
 
 export interface Folder {

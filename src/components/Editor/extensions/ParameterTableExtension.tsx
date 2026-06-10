@@ -4,10 +4,24 @@ import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react'
 import { Plus, Trash2 } from 'lucide-react'
 import type { ParameterRow } from '../../../types'
 
+// Safely parse JSON from attributes, handling invalid markdown escape sequences (e.g. \_ from markdown imports)
+function safeParseRows(raw: string): ParameterRow[] {
+  if (!raw) return [{ parameter: '', value: '', type: '' }];
+  try {
+    return JSON.parse(raw);
+  } catch {
+    try {
+      // Strip invalid JSON escape sequences produced by markdown (e.g. \_ \* \[ \])
+      const sanitized = raw.replace(/\\([^"\\\/bfnrtu0-9])/g, '$1');
+      return JSON.parse(sanitized);
+    } catch {
+      return [{ parameter: '', value: '', type: '' }];
+    }
+  }
+}
+
 const ParameterTableComponent = ({ node, updateAttributes, editor, getPos }: any) => {
-  const rows: ParameterRow[] = node.attrs.rows ? JSON.parse(node.attrs.rows) : [
-    { parameter: '', value: '', type: '' }
-  ]
+  const rows: ParameterRow[] = safeParseRows(node.attrs.rows)
   
   let colWidths = node.attrs.columnWidths || [33, 33, 34];
   if (typeof colWidths === 'string') {

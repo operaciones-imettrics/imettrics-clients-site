@@ -67,7 +67,7 @@ export const storage = {
     }
     this.saveStore(store);
     // Broadcast to backend
-    api.put(`/api/guides/${guide.id}`, { guide }).catch(console.error);
+    return api.put(`/api/guides/${guide.id}`, { guide });
   },
 
   deleteGuide(id: string) {
@@ -91,7 +91,7 @@ export const storage = {
       store.folders.push(folder);
     }
     this.saveStore(store);
-    api.put(`/api/folders/${folder.id}`, { folder }).catch(console.error);
+    return api.put(`/api/folders/${folder.id}`, { folder });
   },
 
   clearStore() {

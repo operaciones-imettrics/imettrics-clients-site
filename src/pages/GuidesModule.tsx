@@ -4,8 +4,10 @@ import { GuideList } from "./GuideList";
 import { EditorPage } from "./EditorPage";
 import { Sidebar } from "../components/Sidebar";
 import { storage } from "../services/storage";
+import { useClientContext } from "../contexts/ClientContext";
 
 export const GuidesModule: React.FC = () => {
+  const { selectedClientId } = useClientContext();
   const [currentView, setCurrentView] = useState<"list" | "editor">(
     () => (localStorage.getItem("current_view") as "list" | "editor") || "list"
   );
@@ -13,6 +15,14 @@ export const GuidesModule: React.FC = () => {
     () => localStorage.getItem("active_guide_id")
   );
   const [markdownToImport, setMarkdownToImport] = useState<string | undefined>();
+
+  // Reset view to home list of the workspace whenever client changes
+  useEffect(() => {
+    setCurrentView("list");
+    setActiveGuideId(null);
+    localStorage.removeItem("current_folder_id");
+    window.dispatchEvent(new Event("current_folder_changed"));
+  }, [selectedClientId]);
 
   useEffect(() => {
     localStorage.setItem("current_view", currentView);
