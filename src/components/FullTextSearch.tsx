@@ -140,10 +140,10 @@ export const FullTextSearch: React.FC<FullTextSearchProps> = ({ onSelectGuide })
       <button
         onClick={() => setIsOpen(true)}
         title="Buscar en guías (Ctrl+F)"
-        className="flex items-center gap-2 px-3 py-1.5 text-xs text-slate-400 bg-slate-50 border border-slate-200 rounded-lg hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all w-full"
+        className="flex items-center gap-2 px-2.5 h-[30px] text-xs text-slate-400 bg-slate-50 border border-slate-200 rounded-[4px] hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all w-full"
       >
         <Search size={13} />
-        <span className="flex-1 text-left">Buscar en guías...</span>
+        <span className="flex-1 text-left text-[11px]">Buscar en guías...</span>
         <kbd className="text-[10px] bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded font-mono">⌘F</kbd>
       </button>
 

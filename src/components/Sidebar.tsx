@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { FolderPlus, ChevronRight, ChevronLeft, ChevronDown, Folder, FileText, Search, MoreVertical, Plus, Copy, Trash2, Edit2, Home } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import { FolderPlus, ChevronRight, ChevronLeft, ChevronDown, Folder, FileText, Search, MoreVertical, Plus, Copy, Trash2, Edit2, Home, BookOpen } from "lucide-react";
 import { storage } from "../services/storage";
 import type { Guide, Folder as FolderType } from "../types";
 import { v4 as uuidv4 } from "uuid";
@@ -56,6 +56,52 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSelectGuide, activeGuideId, 
       return next;
     });
   };
+
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const stored = localStorage.getItem('guides_sidebar_width');
+    return stored ? parseInt(stored, 10) : 256;
+  });
+  const [isResizing, setIsResizing] = useState(false);
+
+  const startResizing = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      const sidebarElement = document.getElementById("guides-sidebar-wrapper");
+      if (!sidebarElement) return;
+
+      const rect = sidebarElement.getBoundingClientRect();
+      const newWidth = e.clientX - rect.left;
+      
+      if (newWidth >= 200 && newWidth <= 600) {
+        setSidebarWidth(newWidth);
+      }
+    };
+    
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'col-resize';
+    } else {
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+      localStorage.setItem('guides_sidebar_width', sidebarWidth.toString());
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, sidebarWidth]);
 
   useEffect(() => {
     localStorage.setItem("expanded_folders", JSON.stringify(Array.from(expandedFolders)));
@@ -315,31 +361,34 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSelectGuide, activeGuideId, 
 
   return (
     <div 
-      className={`shrink-0 transition-all duration-300 ease-in-out no-print ${
-        isCollapsed ? 'w-12' : 'w-64'
-      }`}
+      id="guides-sidebar-wrapper"
+      className={`shrink-0 transition-all duration-300 ease-in-out no-print relative`}
+      style={{ width: isCollapsed ? 48 : sidebarWidth, minWidth: isCollapsed ? 48 : sidebarWidth }}
     >
       <aside 
         onMouseEnter={() => { if (isCollapsed) setIsHovered(true); }}
         onMouseLeave={() => { setIsHovered(false); }}
-        className={`h-screen border-r border-slate-200 bg-white flex flex-col no-print z-40 transition-all duration-300 ease-in-out ${
-          isCollapsed && !isHovered ? 'w-12' : 'w-64'
-        } ${isCollapsed ? 'absolute shadow-xl shadow-slate-200/50' : ''}`}
+        className={`h-screen border-r border-slate-200 bg-white flex flex-col no-print z-40 transition-all duration-300 ease-in-out ${isCollapsed ? 'absolute shadow-xl shadow-slate-200/50' : ''}`}
+        style={{ width: isCollapsed && !isHovered ? 48 : sidebarWidth }}
       >
+        {/* Resize Handle */}
+        {(!isCollapsed || isHovered) && (
+          <div 
+            className="absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-blue-400/30 active:bg-blue-500/50 z-50 transition-colors"
+            onMouseDown={startResizing}
+          />
+        )}
+        
         <div className="p-4 border-b border-slate-100 flex flex-col gap-4">
           <div className={`flex items-center justify-between ${isCollapsed && !isHovered ? 'flex-col gap-3' : ''}`}>
             {(!isCollapsed || isHovered) ? (
               <div 
                 onClick={onGoHome}
-                className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
-                title="Ir al Inicio"
+                className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity flex-1"
+                title="Ir al Inicio del Workspace"
               >
-                <img 
-                  src="https://imettrics.com/wp-content/uploads/elementor/thumbs/Logo-iMettrics-sticky-ro55wralkc88s4fvi5tu9l2jqo274cystymc231vli.png" 
-                  alt="iMettrics Logo" 
-                  className="h-6 object-contain"
-                />
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider self-end mb-0.5">Guías</span>
+                <Home size={18} className="text-slate-500" />
+                <span className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-0.5">Guías de Medición</span>
               </div>
             ) : (
               <Tooltip label="Ir al Inicio" position="right">
@@ -348,53 +397,61 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSelectGuide, activeGuideId, 
                 </ActionIcon>
               </Tooltip>
             )}
-            <div className={`flex gap-1 ${isCollapsed && !isHovered ? 'flex-col items-center' : ''}`}>
-              {(!isCollapsed || isHovered) && (
-                <>
-                  <Tooltip label="Ir al Inicio" position="bottom">
-                    <ActionIcon variant="subtle" color="slate" onClick={onGoHome}>
-                      <Home size={18} className="text-slate-500 hover:text-blue-600 transition-colors" />
-                    </ActionIcon>
-                  </Tooltip>
-                  {isAdmin && (
-                    <Tooltip label="Nueva Carpeta Raíz" position="bottom">
-                      <ActionIcon variant="light" color="blue" onClick={() => handleCreateFolder(null)}>
-                        <FolderPlus size={18} />
-                      </ActionIcon>
-                    </Tooltip>
-                  )}
-                </>
-              )}
-              <Tooltip label={isCollapsed ? "Expandir barra de guías" : "Contraer barra de guías"} position="right">
-                <ActionIcon variant="subtle" color="gray" onClick={toggleCollapsed}>
-                  {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-                </ActionIcon>
-              </Tooltip>
-            </div>
+            
+            <Tooltip label={isCollapsed ? "Expandir barra de guías" : "Contraer barra de guías"} position="right">
+              <ActionIcon variant="subtle" color="gray" onClick={toggleCollapsed} className={isCollapsed && !isHovered ? "" : "ml-2 shrink-0"}>
+                {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+              </ActionIcon>
+            </Tooltip>
           </div>
+
           {(!isCollapsed || isHovered) ? (
-            <div className="flex flex-col gap-2">
+            <div className="mt-2 mb-1">
               <FullTextSearch onSelectGuide={onSelectGuide} />
+            </div>
+          ) : (
+            <Tooltip label="Buscar en guías" position="right">
+              <ActionIcon variant="subtle" color="gray" onClick={() => { setIsCollapsed(false); setIsHovered(true); }} className="mx-auto mt-2">
+                <Search size={16} />
+              </ActionIcon>
+            </Tooltip>
+          )}
+
+          {(!isCollapsed || isHovered) && (
+            <hr className="border-slate-200 my-2" />
+          )}
+
+          {(!isCollapsed || isHovered) && (
+            <div className="px-1 mb-2">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Árbol de Documentos</span>
+            </div>
+          )}
+
+          {(!isCollapsed || isHovered) && (
+            <div className="flex gap-2 mb-4">
               <TextInput
                 placeholder="Filtrar árbol..."
                 size="xs"
                 leftSection={<Search size={14} />}
                 value={search}
                 onChange={(e) => setSearch(e.currentTarget.value)}
+                className="flex-1"
               />
+              {isAdmin && (
+                <Tooltip label="Nueva Carpeta Raíz" position="bottom">
+                  <ActionIcon variant="light" color="blue" size="md" onClick={() => handleCreateFolder(null)}>
+                    <FolderPlus size={16} />
+                  </ActionIcon>
+                </Tooltip>
+              )}
             </div>
-          ) : (
-            <Tooltip label="Buscar en guías" position="right">
-              <ActionIcon variant="subtle" color="gray" onClick={() => { setIsCollapsed(false); setIsHovered(true); }}>
-                <Search size={16} />
-              </ActionIcon>
-            </Tooltip>
           )}
+
         </div>
 
         {(!isCollapsed || isHovered) ? (
           <ScrollArea 
-            className="flex-grow p-2" 
+            className="flex-grow p-2 pt-0" 
             onDragOver={(e) => onDragOver(e, null)} 
             onDragLeave={onDragLeave}
             onDrop={(e) => onDrop(e, null)}

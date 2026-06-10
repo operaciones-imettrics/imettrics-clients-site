@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { BookOpen, BarChart2, PieChart, Settings, ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
+import { BookOpen, BarChart2, PieChart, Settings, ChevronLeft, ChevronRight, LogOut, Home } from 'lucide-react';
 import { Tooltip } from '@mantine/core';
 import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebase';
@@ -80,10 +80,29 @@ export const AppShell: React.FC = () => {
             </div>
             
             {workspace && (!isCollapsed || isHovered) && (
-              <div className="bg-slate-800/60 rounded-lg px-3 py-2 transition-all duration-200">
-                <p className="text-slate-500 text-xs mb-0.5">Workspace</p>
-                <p className="text-white text-sm font-semibold truncate">{workspace.name}</p>
-              </div>
+              <NavLink 
+                to="." 
+                end
+                className={({ isActive }) => 
+                  `group flex items-center gap-3 bg-slate-800/40 rounded-xl p-2.5 transition-all duration-200 border ${
+                    isActive ? 'border-blue-500/50 shadow-inner shadow-blue-500/10 bg-slate-800/80' : 'border-slate-700/50 hover:border-slate-600 hover:bg-slate-800'
+                  }`
+                }
+                title="Ir al inicio del workspace"
+              >
+                <div className={`shrink-0 p-2 rounded-lg transition-colors ${
+                  // Using inline function to check if active to apply conditional styling to the icon container
+                  window.location.pathname.endsWith(workspace.id) || window.location.pathname.endsWith(workspace.id + '/')
+                    ? 'bg-blue-500/20 text-blue-400' 
+                    : 'bg-slate-900/60 text-slate-400 group-hover:text-blue-400 group-hover:bg-slate-900'
+                }`}>
+                  <Home size={18} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-slate-400 text-[9px] font-bold uppercase tracking-wider mb-0.5">Inicio Workspace</p>
+                  <p className="text-white text-sm font-semibold truncate leading-tight">{workspace.name}</p>
+                </div>
+              </NavLink>
             )}
           </div>
 
