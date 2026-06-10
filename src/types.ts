@@ -12,6 +12,7 @@ export interface Folder {
   id: string;
   name: string;
   parentId: string | null;
+  order?: number;
 }
 
 export interface Guide {
@@ -19,6 +20,7 @@ export interface Guide {
   title: string;
   content: JSONContent;
   folderId: string | null;
+  order?: number;
   createdAt: string;
   updatedAt: string;
 }

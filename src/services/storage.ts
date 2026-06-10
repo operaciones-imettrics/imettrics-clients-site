@@ -149,6 +149,89 @@ export const storage = {
     }
   },
 
+  reorderItems(
+    sourceId: string, 
+    sourceType: 'guide' | 'folder', 
+    targetId: string, 
+    targetType: 'guide' | 'folder', 
+    position: 'before' | 'after'
+  ) {
+    const store = this.getStore();
+    
+    // Find the target's parent
+    let parentId: string | null = null;
+    if (targetType === 'guide') {
+      const g = store.guides.find(g => g.id === targetId);
+      if (g) parentId = g.folderId;
+    } else {
+      const f = store.folders.find(f => f.id === targetId);
+      if (f) parentId = f.parentId;
+    }
+
+    // Prevent folder from being its own parent or child's parent
+    if (sourceType === 'folder' && sourceType === targetType && sourceId === targetId) return;
+
+    // Move source to target's parent
+    if (sourceType === 'guide') {
+      const g = store.guides.find(g => g.id === sourceId);
+      if (g) {
+        g.folderId = parentId;
+        g.updatedAt = new Date().toISOString();
+      }
+    } else {
+      const f = store.folders.find(f => f.id === sourceId);
+      if (f) f.parentId = parentId;
+    }
+
+    // Get all items in this parent
+    const itemsInParent = [
+      ...store.folders.filter(f => f.parentId === parentId).map(f => ({ ...f, type: 'folder' as const })),
+      ...store.guides.filter(g => g.folderId === parentId).map(g => ({ ...g, type: 'guide' as const }))
+    ];
+
+    // Sort by existing order
+    itemsInParent.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    // Remove source from items
+    const filteredItems = itemsInParent.filter(i => !(i.id === sourceId && i.type === sourceType));
+    
+    // Find target index
+    const targetIndex = filteredItems.findIndex(i => i.id === targetId && i.type === targetType);
+    if (targetIndex === -1) return; // Should not happen
+    
+    // Insert source at target index
+    const insertIndex = position === 'before' ? targetIndex : targetIndex + 1;
+    
+    const sourceItem = itemsInParent.find(i => i.id === sourceId && i.type === sourceType);
+    if (!sourceItem) return;
+    
+    filteredItems.splice(insertIndex, 0, sourceItem);
+
+    // Reassign order
+    filteredItems.forEach((item, index) => {
+      if (item.type === 'guide') {
+        const g = store.guides.find(g => g.id === item.id);
+        if (g) g.order = index;
+      } else {
+        const f = store.folders.find(f => f.id === item.id);
+        if (f) f.order = index;
+      }
+    });
+
+    this.saveStore(store);
+    
+    // Sync to backend for all modified items
+    filteredItems.forEach(item => {
+      if (item.type === 'guide') {
+        const g = store.guides.find(g => g.id === item.id);
+        if (g) api.put(`/api/guides/${g.id}`, { guide: g }).catch(console.error);
+      } else {
+        const f = store.folders.find(f => f.id === item.id);
+        if (f) api.put(`/api/folders/${f.id}`, { folder: f }).catch(console.error);
+      }
+    });
+  },
+
   copyGuide(guideId: string, targetFolderId: string | null = null) {
     const store = this.getStore();
     const guide = store.guides.find(g => g.id === guideId);
