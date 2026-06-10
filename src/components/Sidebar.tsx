@@ -5,6 +5,7 @@ import type { Guide, Folder as FolderType } from "../types";
 import { v4 as uuidv4 } from "uuid";
 import { ScrollArea, TextInput, ActionIcon, Menu, Button, Tooltip, Modal } from "@mantine/core";
 import { useAuth } from "./AuthProvider";
+import { FullTextSearch } from "./FullTextSearch";
 
 interface SidebarProps {
   onSelectGuide: (id: string) => void;
@@ -372,15 +373,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSelectGuide, activeGuideId, 
             </div>
           </div>
           {(!isCollapsed || isHovered) ? (
-            <TextInput
-              placeholder="Buscar guías..."
-              size="xs"
-              leftSection={<Search size={14} />}
-              value={search}
-              onChange={(e) => setSearch(e.currentTarget.value)}
-            />
+            <div className="flex flex-col gap-2">
+              <FullTextSearch onSelectGuide={onSelectGuide} />
+              <TextInput
+                placeholder="Filtrar árbol..."
+                size="xs"
+                leftSection={<Search size={14} />}
+                value={search}
+                onChange={(e) => setSearch(e.currentTarget.value)}
+              />
+            </div>
           ) : (
-            <Tooltip label="Buscar guías" position="right">
+            <Tooltip label="Buscar en guías" position="right">
               <ActionIcon variant="subtle" color="gray" onClick={() => { setIsCollapsed(false); setIsHovered(true); }}>
                 <Search size={16} />
               </ActionIcon>
