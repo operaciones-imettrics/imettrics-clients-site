@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FolderPlus, ChevronRight, ChevronDown, Folder, FileText, Search, MoreVertical, Plus, Copy, Trash2, Edit2, Home } from "lucide-react";
+import { FolderPlus, ChevronRight, ChevronLeft, ChevronDown, Folder, FileText, Search, MoreVertical, Plus, Copy, Trash2, Edit2, Home } from "lucide-react";
 import { storage } from "../services/storage";
 import type { Guide, Folder as FolderType } from "../types";
 import { v4 as uuidv4 } from "uuid";
@@ -42,6 +42,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSelectGuide, activeGuideId, 
   });
   const [draggedItem, setDraggedItem] = useState<{ id: string; type: 'guide' | 'folder' } | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    return localStorage.getItem('guides_sidebar_collapsed') === 'true';
+  });
+  const [isHovered, setIsHovered] = useState(false);
+
+  const toggleCollapsed = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem('guides_sidebar_collapsed', String(next));
+      return next;
+    });
+  };
 
   useEffect(() => {
     localStorage.setItem("expanded_folders", JSON.stringify(Array.from(expandedFolders)));
@@ -300,78 +313,129 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSelectGuide, activeGuideId, 
   const unclassifiedGuides = filteredGuides.filter(g => !g.folderId);
 
   return (
-    <aside className="w-64 h-screen border-r border-slate-200 bg-white flex flex-col no-print shrink-0 overflow-hidden">
-      <div className="p-4 border-b border-slate-100">
-        <div className="flex items-center justify-between mb-4">
-          <div 
-            onClick={onGoHome}
-            className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
-            title="Ir al Inicio"
-          >
-            <img 
-              src="https://imettrics.com/wp-content/uploads/elementor/thumbs/Logo-iMettrics-sticky-ro55wralkc88s4fvi5tu9l2jqo274cystymc231vli.png" 
-              alt="iMettrics Logo" 
-              className="h-6 object-contain"
-            />
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider self-end mb-0.5">Guías</span>
+    <div 
+      className={`shrink-0 transition-all duration-300 ease-in-out no-print ${
+        isCollapsed ? 'w-12' : 'w-64'
+      }`}
+    >
+      <aside 
+        onMouseEnter={() => { if (isCollapsed) setIsHovered(true); }}
+        onMouseLeave={() => { setIsHovered(false); }}
+        className={`h-screen border-r border-slate-200 bg-white flex flex-col no-print z-40 transition-all duration-300 ease-in-out ${
+          isCollapsed && !isHovered ? 'w-12' : 'w-64'
+        } ${isCollapsed ? 'absolute shadow-xl shadow-slate-200/50' : ''}`}
+      >
+        <div className="p-4 border-b border-slate-100 flex flex-col gap-4">
+          <div className={`flex items-center justify-between ${isCollapsed && !isHovered ? 'flex-col gap-3' : ''}`}>
+            {(!isCollapsed || isHovered) ? (
+              <div 
+                onClick={onGoHome}
+                className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                title="Ir al Inicio"
+              >
+                <img 
+                  src="https://imettrics.com/wp-content/uploads/elementor/thumbs/Logo-iMettrics-sticky-ro55wralkc88s4fvi5tu9l2jqo274cystymc231vli.png" 
+                  alt="iMettrics Logo" 
+                  className="h-6 object-contain"
+                />
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider self-end mb-0.5">Guías</span>
+              </div>
+            ) : (
+              <Tooltip label="Ir al Inicio" position="right">
+                <ActionIcon variant="subtle" color="slate" onClick={onGoHome}>
+                  <Home size={18} className="text-slate-500 hover:text-blue-600 transition-colors" />
+                </ActionIcon>
+              </Tooltip>
+            )}
+            <div className={`flex gap-1 ${isCollapsed && !isHovered ? 'flex-col items-center' : ''}`}>
+              {(!isCollapsed || isHovered) && (
+                <>
+                  <Tooltip label="Ir al Inicio" position="bottom">
+                    <ActionIcon variant="subtle" color="slate" onClick={onGoHome}>
+                      <Home size={18} className="text-slate-500 hover:text-blue-600 transition-colors" />
+                    </ActionIcon>
+                  </Tooltip>
+                  {isAdmin && (
+                    <Tooltip label="Nueva Carpeta Raíz" position="bottom">
+                      <ActionIcon variant="light" color="blue" onClick={() => handleCreateFolder(null)}>
+                        <FolderPlus size={18} />
+                      </ActionIcon>
+                    </Tooltip>
+                  )}
+                </>
+              )}
+              <Tooltip label={isCollapsed ? "Expandir barra de guías" : "Contraer barra de guías"} position="right">
+                <ActionIcon variant="subtle" color="gray" onClick={toggleCollapsed}>
+                  {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+                </ActionIcon>
+              </Tooltip>
+            </div>
           </div>
-          <div className="flex gap-1">
-            <Tooltip label="Ir al Inicio" position="bottom">
-              <ActionIcon variant="subtle" color="slate" onClick={onGoHome}>
-                <Home size={18} className="text-slate-500 hover:text-blue-600 transition-colors" />
+          {(!isCollapsed || isHovered) ? (
+            <TextInput
+              placeholder="Buscar guías..."
+              size="xs"
+              leftSection={<Search size={14} />}
+              value={search}
+              onChange={(e) => setSearch(e.currentTarget.value)}
+            />
+          ) : (
+            <Tooltip label="Buscar guías" position="right">
+              <ActionIcon variant="subtle" color="gray" onClick={() => { setIsCollapsed(false); setIsHovered(true); }}>
+                <Search size={16} />
               </ActionIcon>
             </Tooltip>
-            {isAdmin && (
-              <Tooltip label="Nueva Carpeta Raíz" position="bottom">
-                <ActionIcon variant="light" color="blue" onClick={() => handleCreateFolder(null)}>
-                  <FolderPlus size={18} />
+          )}
+        </div>
+
+        {(!isCollapsed || isHovered) ? (
+          <ScrollArea 
+            className="flex-grow p-2" 
+            onDragOver={(e) => onDragOver(e, null)} 
+            onDragLeave={onDragLeave}
+            onDrop={(e) => onDrop(e, null)}
+          >
+            <div className="space-y-1">
+              {rootFolders.map(f => renderFolder(f))}
+              
+              <div className="mt-6">
+                <div className="px-2 mb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                  <span>Sin clasificar</span>
+                </div>
+                <div className="space-y-0.5">
+                  {unclassifiedGuides.map(g => renderGuide(g))}
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+        ) : (
+          <div className="flex-grow flex flex-col items-center py-4 gap-4 text-slate-400 select-none">
+            <Folder size={18} />
+            <FileText size={18} />
+          </div>
+        )}
+
+        {isAdmin && (
+          <div className="p-3 border-t border-slate-100 bg-slate-50/50">
+            {(!isCollapsed || isHovered) ? (
+              <Button 
+                fullWidth 
+                variant="light" 
+                size="xs" 
+                leftSection={<Plus size={16} />}
+                onClick={() => onNewGuide(null)}
+              >
+                Nueva guía rápida
+              </Button>
+            ) : (
+              <Tooltip label="Nueva guía rápida" position="right">
+                <ActionIcon variant="light" color="blue" size="md" className="mx-auto" onClick={() => onNewGuide(null)}>
+                  <Plus size={16} />
                 </ActionIcon>
               </Tooltip>
             )}
           </div>
-        </div>
-        <TextInput
-          placeholder="Buscar guías..."
-          size="xs"
-          leftSection={<Search size={14} />}
-          value={search}
-          onChange={(e) => setSearch(e.currentTarget.value)}
-        />
-      </div>
-
-      <ScrollArea 
-        className="flex-grow p-2" 
-        onDragOver={(e) => onDragOver(e, null)} 
-        onDragLeave={onDragLeave}
-        onDrop={(e) => onDrop(e, null)}
-      >
-        <div className="space-y-1">
-          {rootFolders.map(f => renderFolder(f))}
-          
-          <div className="mt-6">
-            <div className="px-2 mb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-              <span>Sin clasificar</span>
-            </div>
-            <div className="space-y-0.5">
-              {unclassifiedGuides.map(g => renderGuide(g))}
-            </div>
-          </div>
-        </div>
-      </ScrollArea>
-
-      {isAdmin && (
-        <div className="p-3 border-t border-slate-100 bg-slate-50/50">
-          <Button 
-            fullWidth 
-            variant="light" 
-            size="xs" 
-            leftSection={<Plus size={16} />}
-            onClick={() => onNewGuide(null)}
-          >
-            Nueva guía rápida
-          </Button>
-        </div>
-      )}
+        )}
 
       <Modal
         opened={!!dialog}
@@ -421,6 +485,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSelectGuide, activeGuideId, 
           </div>
         )}
       </Modal>
-    </aside>
+      </aside>
+    </div>
   );
 };

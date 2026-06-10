@@ -155,7 +155,7 @@ export const GuideList: React.FC<GuideListProps> = ({
         updatedAt: new Date().toISOString(),
       };
       
-      storage.saveGuide(newGuide);
+      await storage.saveGuide(newGuide);
       
       setImportProgress(100);
       setImportStats({
@@ -340,7 +340,7 @@ export const GuideList: React.FC<GuideListProps> = ({
         updatedAt: new Date().toISOString(),
       };
       
-      storage.saveGuide(newGuide);
+      await storage.saveGuide(newGuide);
 
       setImportProgress(100);
       setImportStats({
@@ -370,6 +370,7 @@ export const GuideList: React.FC<GuideListProps> = ({
           setImportProgress(progress);
         },
         {
+          clientId: selectedClientId,
           skipImages,
           onStatusChange: (fileName, phase) => {
             let msg = "";

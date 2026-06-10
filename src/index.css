@@ -129,6 +129,17 @@ body {
     padding: 0.5rem 1rem !important;
   }
 
+  .page-break {
+    page-break-after: always !important;
+    break-after: page !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    display: block !important;
+  }
+
   /* Ensure background colors print */
   * {
     -webkit-print-color-adjust: exact !important;
@@ -362,6 +373,19 @@ body {
   border-top: 1px solid #f1f5f9;
   margin-top: 0.25rem;
   min-height: 1.5rem;
+}
+
+/* Page Break block styles */
+.page-break-wrapper {
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.page-break {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
 }
 
 

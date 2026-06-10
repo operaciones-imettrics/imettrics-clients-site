@@ -1,7 +1,7 @@
 import { ReactRenderer } from '@tiptap/react'
 import tippy from 'tippy.js'
 import { MenuList } from './MenuList'
-import { Heading1, Heading2, Heading3, Type, Info, BadgeCheck, Code2, TableProperties, ChevronDown, AlignCenter, AlignRight, Plus } from 'lucide-react';
+import { Heading1, Heading2, Heading3, Type, Info, BadgeCheck, Code2, TableProperties, ChevronDown, AlignCenter, AlignRight, Plus, Scissors } from 'lucide-react';
 
 // Helper to open file selector and insert image
 const insertImageFromFile = (editor: any) => {
@@ -114,6 +114,14 @@ export const suggestion = {
             type: 'collapsibleBlock',
             content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Contenido contraíble aquí...' }] }]
           }).run()
+        },
+      },
+      {
+        title: 'Salto de página',
+        description: 'Fuerza un salto de página al exportar o imprimir en PDF.',
+        icon: <Scissors size={18} />,
+        command: ({ editor, range }: any) => {
+          editor.chain().focus().deleteRange(range).insertContent({ type: 'pageBreak' }).run()
         },
       },
       {

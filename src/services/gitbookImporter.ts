@@ -6,6 +6,8 @@ import StarterKit from "@tiptap/starter-kit";
 import { Markdown } from "tiptap-markdown";
 import { storage } from "./storage";
 import type { Folder, Guide } from "../types";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { storage as firebaseStorage } from "../lib/firebase";
 
 import { ResizableImage } from "../components/Editor/extensions/ResizableImage";
 import { CalloutExtension } from "../components/Editor/extensions/CalloutExtension";
@@ -143,9 +145,11 @@ function translateParameterTables(markdown: string): string {
           while (j < lines.length && lines[j].trim().startsWith("|") && lines[j].trim().endsWith("|")) {
             const cells = lines[j].split("|").map(s => s.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
             
-            const parameter = cells[0] ? cells[0].replace(/[`*]/g, "") : "";
-            const value = cells[1] ? cells[1].replace(/[`*]/g, "") : "";
-            const type = cells[2] ? cells[2].replace(/[`*]/g, "") : "";
+            // Strip markdown formatting AND invalid JSON escape sequences (e.g. \_ -> _)
+            const cleanCell = (s: string) => s.replace(/[`*]/g, "").replace(/\\([^\\"])/g, '$1').trim();
+            const parameter = cells[0] ? cleanCell(cells[0]) : "";
+            const value = cells[1] ? cleanCell(cells[1]) : "";
+            const type = cells[2] ? cleanCell(cells[2]) : "";
             
             if (parameter || value || type) {
               rows.push({ parameter, value, type });
@@ -229,37 +233,52 @@ function preprocessMarkdownBlocks(markdown: string): string {
       const title = tabMatch[1].trim();
       const content = tabMatch[2];
       
-      if (title.toLowerCase() === "parámetros" || title.toLowerCase() === "parametros") {
-        try {
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(content, "text/html");
-          const rows = doc.querySelectorAll("tr");
-          const parameterRows: { parameter: string; value: string; type: string }[] = [];
-          
-          // Skip first row which is the repeated bold header
-          for (let r = 1; r < rows.length; r++) {
-            const cells = rows[r].querySelectorAll("td");
-            if (cells.length >= 2) {
-              const parameter = cells[0].textContent?.trim() || "";
-              const value = cells[1].textContent?.trim() || "";
-              const type = cells[2]?.textContent?.trim() || "Default";
-              
-              if (parameter || value) {
-                parameterRows.push({ parameter, value, type });
+      const titleLower = title.toLowerCase();
+      const isParamTab = titleLower.includes("param") || titleLower.includes("parám");
+      const isCodeTab = titleLower.includes("datalayer") || 
+                        titleLower.includes("code") || 
+                        titleLower.includes("código") || 
+                        titleLower.includes("codigo") || 
+                        titleLower.includes("js") || 
+                        titleLower.includes("javascript");
+
+      if (isParamTab) {
+        if (content.includes('data-type="parameter-table"')) {
+          tabsHtml += `\n${content}\n`;
+        } else {
+          try {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(content, "text/html");
+            const rows = doc.querySelectorAll("tr");
+            const parameterRows: { parameter: string; value: string; type: string }[] = [];
+            
+            // Skip first row which is the repeated bold header
+            for (let r = 1; r < rows.length; r++) {
+              const cells = rows[r].querySelectorAll("td");
+              if (cells.length >= 2) {
+                const parameter = cells[0].textContent?.trim() || "";
+                const value = cells[1].textContent?.trim() || "";
+                const type = cells[2]?.textContent?.trim() || "Default";
+                
+                if (parameter || value) {
+                  parameterRows.push({ parameter, value, type });
+                }
               }
             }
+            
+            if (parameterRows.length > 0) {
+              const jsonRows = JSON.stringify(parameterRows);
+              tabsHtml += `\n<div data-type="parameter-table" rows='${jsonRows.replace(/'/g, "&#39;")}' columnwidths="[33,33,34]"></div>\n`;
+            } else {
+              tabsHtml += `\n${content}\n`;
+            }
+          } catch (e) {
+            console.error("Error parsing parameter table HTML", e);
+            tabsHtml += `\n${content}\n`;
           }
-          
-          if (parameterRows.length > 0) {
-            const jsonRows = JSON.stringify(parameterRows);
-            tabsHtml += `\n<div data-type="parameter-table" rows='${jsonRows.replace(/'/g, "&#39;")}' columnwidths="[33,33,34]"></div>\n`;
-          }
-        } catch (e) {
-          console.error("Error parsing parameter table HTML", e);
-          tabsHtml += `\n<!-- Error al parsear tabla de parámetros -->\n`;
         }
-      } else if (title.toLowerCase() === "datalayer") {
-        const codeMatch = content.match(/```(?:javascript)?\r?\n([\s\S]*?)\r?\n```/);
+      } else if (isCodeTab) {
+        const codeMatch = content.match(/```(?:javascript|json|html|css)?\r?\n([\s\S]*?)\r?\n```/);
         const codeText = codeMatch ? codeMatch[1].trim() : content.trim();
         tabsHtml += `\n\`\`\`javascript\n${codeText}\n\`\`\`\n`;
       } else {
@@ -474,7 +493,7 @@ export function parseSummary(summaryText: string): SummaryItem[] {
 export async function importGitBook(
   input: File | File[],
   onProgress?: (progress: number) => void,
-  options?: { skipImages?: boolean; onStatusChange?: (fileName: string, phase: "pre" | "mig" | "lnk") => void }
+  options?: { clientId?: string | null; skipImages?: boolean; onStatusChange?: (fileName: string, phase: "pre" | "mig" | "lnk") => void }
 ): Promise<ImportStats> {
   const isZip = !Array.isArray(input);
   
@@ -564,30 +583,47 @@ export async function importGitBook(
 
     if (!found) return ""; // Image not found after all attempts
 
-    let base64 = "";
+    let fileBlob: Blob | null = null;
     const mimeType = getMimeType(resolvedPath);
     
     // 5. Load file contents
     if (isZip && zipInstance) {
       const file = zipInstance.file(rootPrefix + resolvedPath) || zipInstance.file(resolvedPath);
       if (file) {
-        base64 = await file.async("base64");
+        fileBlob = await file.async("blob");
       }
     } else {
       const file = filesList.find(f => f.webkitRelativePath === rootPrefix + resolvedPath || f.webkitRelativePath.endsWith(resolvedPath));
       if (file) {
-        const arrBuffer = await file.arrayBuffer();
-        // Convert arrayBuffer to base64
-        let binary = "";
-        const bytes = new Uint8Array(arrBuffer);
-        const len = bytes.byteLength;
-        for (let i = 0; i < len; i++) {
-          binary += String.fromCharCode(bytes[i]);
-        }
-        base64 = btoa(binary);
+        fileBlob = file;
       }
     }
     
+    if (!fileBlob) return "";
+
+    // 6. Upload to Firebase Storage if clientId is provided
+    if (options?.clientId) {
+      try {
+        const fileName = resolvedPath.split("/").pop() || `image-${Date.now()}`;
+        const storageRef = ref(firebaseStorage, `clientes/${options.clientId}/imports/${Date.now()}-${fileName}`);
+        await uploadBytes(storageRef, fileBlob);
+        const downloadUrl = await getDownloadURL(storageRef);
+        return downloadUrl;
+      } catch (uploadErr) {
+        console.error("Failed to upload image to Firebase Storage. Falling back to base64.", uploadErr);
+      }
+    }
+
+    // Fallback: convert blob to base64 and compress
+    let base64 = "";
+    const reader = new FileReader();
+    const base64Promise = new Promise<string>((resolve) => {
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve("");
+    });
+    reader.readAsDataURL(fileBlob);
+    base64 = await base64Promise;
+
     if (!base64) return "";
 
     const rawDataUrl = `data:${mimeType};base64,${base64}`;
@@ -627,7 +663,7 @@ export async function importGitBook(
     name: `Importación: ${spaceName}`,
     parentId: null,
   };
-  storage.saveFolder(importRootFolder);
+  await storage.saveFolder(importRootFolder);
 
   // E. Recursively Import Items
   let importedFolderCount = 1; // start with the root import folder
@@ -680,7 +716,7 @@ export async function importGitBook(
         name: item.title,
         parentId: parentFolderId,
       };
-      storage.saveFolder(folder);
+      await storage.saveFolder(folder);
       importedFolderCount++;
       currentFolderId = folderId;
     }
@@ -716,7 +752,7 @@ export async function importGitBook(
           options = { ...(options || {}), skipImages: true };
         }
         try {
-          storage.saveGuide(guide);
+          await storage.saveGuide(guide);
         } catch (e: any) {
           if (e.name === 'QuotaExceededError' || e.message?.includes('storage')) {
             console.warn('LocalStorage quota reached while saving guide. Skipping remaining guides.');
@@ -761,7 +797,7 @@ export async function importGitBook(
   }
 
   // F. Second Pass: Resolve internal links
-  const resolveInternalLinksInGuide = (guideId: string, guidePath: string) => {
+  const resolveInternalLinksInGuide = async (guideId: string, guidePath: string) => {
     const guide = storage.getGuide(guideId);
     if (!guide) return;
 
@@ -798,7 +834,7 @@ export async function importGitBook(
     traverseNodes(guide.content);
 
     if (modified) {
-      storage.saveGuide(guide);
+      await storage.saveGuide(guide);
     }
   };
 
@@ -808,7 +844,7 @@ export async function importGitBook(
     if (guide && options?.onStatusChange) {
       options.onStatusChange(guide.title, "lnk");
     }
-    resolveInternalLinksInGuide(guideId, path);
+    await resolveInternalLinksInGuide(guideId, path);
   }
 
   return {

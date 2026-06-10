@@ -15,6 +15,7 @@ import { useEffect } from 'react'
 import { CalloutExtension } from './extensions/CalloutExtension'
 import { StatusBadgeExtension } from './extensions/StatusBadgeExtension'
 import { ParameterTableExtension } from './extensions/ParameterTableExtension'
+import { PageBreakExtension } from './extensions/PageBreakExtension'
 import { CollapsibleBlock, CollapsibleSection, CollapsibleSummary, CollapsibleContent } from './extensions/CollapsibleExtension'
 import { ResizableImage } from './extensions/ResizableImage'
 import { SlashMenu } from './slash-menu'
@@ -58,6 +59,7 @@ export const TiptapEditor = ({
       CalloutExtension,
       StatusBadgeExtension,
       ParameterTableExtension,
+      PageBreakExtension,
       CollapsibleBlock,
       CollapsibleSection,
       CollapsibleSummary,
