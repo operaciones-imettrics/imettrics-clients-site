@@ -3,7 +3,7 @@ import { api } from "../lib/api";
 import type { Client } from "../types";
 import { Folder, Plus, LogOut, Link, MoreVertical, Edit2, Pause, Play, Trash2 } from "lucide-react";
 import { auth } from "../lib/firebase";
-import { Modal, Button, TextInput, ColorInput, Menu, ActionIcon, Tooltip } from '@mantine/core';
+import { Modal, Button, TextInput, ColorInput, Menu, ActionIcon } from '@mantine/core';
 import { useNavigate } from 'react-router-dom';
 
 export const AdminPortal: React.FC = () => {
