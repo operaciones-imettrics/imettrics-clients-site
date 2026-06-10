@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useClientContext } from '../contexts/ClientContext';
 import { BookOpen, BarChart2, PieChart, ArrowRight, Settings } from 'lucide-react';
 import { useAuth } from '../components/AuthProvider';

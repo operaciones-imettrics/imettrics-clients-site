@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { FolderPlus, ChevronRight, ChevronLeft, ChevronDown, Folder, FileText, Search, MoreVertical, Plus, Copy, Trash2, Edit2, Home, BookOpen } from "lucide-react";
+import { FolderPlus, ChevronRight, ChevronLeft, ChevronDown, Folder, FileText, Search, MoreVertical, Plus, Copy, Trash2, Edit2, Home } from "lucide-react";
 import { storage } from "../services/storage";
 import type { Guide, Folder as FolderType } from "../types";
 import { v4 as uuidv4 } from "uuid";
